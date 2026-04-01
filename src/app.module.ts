@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { HealthModule } from './health/health.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { PatientModule } from './patient/patient.module';
 
 @Module({
   imports: [
@@ -23,11 +24,10 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         migrations: [__dirname + '/migrations/*{.ts,.js}'],
         synchronize: false,
-        logging: config.get<string>('NODE_ENV') === 'development',
       }),
     }),
-
     HealthModule,
+    PatientModule,
   ],
   controllers: [],
   providers: [],
