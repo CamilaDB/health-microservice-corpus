@@ -3,6 +3,7 @@ import { HealthModule } from './health/health.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PatientModule } from './patient/patient.module';
+import { EncountersModule } from './encounters/encounters.module';
 
 @Module({
   imports: [
@@ -26,8 +27,10 @@ import { PatientModule } from './patient/patient.module';
         synchronize: false,
       }),
     }),
+
     HealthModule,
     PatientModule,
+    EncountersModule,
   ],
   controllers: [],
   providers: [],

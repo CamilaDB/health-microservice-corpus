@@ -2,11 +2,12 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
-// import { Encounter } from '../../encounter/entities/encounter.entity'; #TODO
+import { Encounter } from 'src/encounters/entities/encounter.entity';
 
 export enum Sex {
   M = 'M',
@@ -54,6 +55,6 @@ export class Patient {
   @UpdateDateColumn()
   updated_at: Date;
 
-  //   @OneToMany(() => Encounter, (encounter) => encounter.patient)
-  //   encounters: Encounter[];
+  @OneToMany(() => Encounter, (encounter) => encounter.patient)
+  encounters: Encounter[];
 }
