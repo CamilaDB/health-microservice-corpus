@@ -3,7 +3,8 @@ import { HealthModule } from './health/health.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PatientModule } from './patient/patient.module';
-import { EncountersModule } from './encounters/encounters.module';
+import { EncounterModule } from './encounter/encounter.module';
+import { OrderModule } from './order/order.module';
 
 @Module({
   imports: [
@@ -30,7 +31,8 @@ import { EncountersModule } from './encounters/encounters.module';
 
     HealthModule,
     PatientModule,
-    EncountersModule,
+    EncounterModule,
+    OrderModule,
   ],
   controllers: [],
   providers: [],

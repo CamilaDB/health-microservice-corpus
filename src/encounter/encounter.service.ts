@@ -14,10 +14,11 @@ import { PatientService } from '../patient/patient.service';
 import { CreateEncounterDto } from './dto/create-encounter.dto';
 import { TransitionEncounterStatusDto } from './dto/transition-encounter-status.dto';
 import { ListEncountersByPatientDto } from './dto/list-encounters-by-patient.dto';
-import { EncounterRepository } from './encounters.repository';
+import { EncounterRepository } from './encounter.repository';
+import { OrderStatus } from 'src/order/entities/order.entity';
 
 @Injectable()
-export class EncountersService {
+export class EncounterService {
   constructor(
     private readonly encounterRepository: EncounterRepository,
     private readonly patientService: PatientService,
@@ -99,7 +100,6 @@ export class EncountersService {
     const { status: currentStatus } = encounter;
     const { status: nextStatus } = dto;
 
-    // Regra 5 — máquina de estados: valida transições permitidas
     const validTransitions: Record<EncounterStatus, EncounterStatus[]> = {
       [EncounterStatus.ADMITTED]: [
         EncounterStatus.TRANSFERRED,
@@ -116,15 +116,16 @@ export class EncountersService {
     }
 
     if (nextStatus === EncounterStatus.DISCHARGED) {
-      // TODO
-      // const hasPendingOrders = encounter.orders?.some(
-      //   (order) => order.status === 'PENDING' || order.status === 'IN_PROGRESS',
-      // );
-      // if (hasPendingOrders) {
-      //   throw new BadRequestException(
-      //     'Cannot discharge encounter with pending or in-progress orders',
-      //   );
-      // }
+      const hasPendingOrders = encounter.orders?.some(
+        (order) =>
+          order.status === OrderStatus.PENDING ||
+          order.status === OrderStatus.IN_PROGRESS,
+      );
+      if (hasPendingOrders) {
+        throw new BadRequestException(
+          'Cannot discharge encounter with pending or in-progress orders',
+        );
+      }
     }
 
     if (nextStatus === EncounterStatus.TRANSFERRED) {

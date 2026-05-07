@@ -7,7 +7,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
-import { Encounter } from 'src/encounters/entities/encounter.entity';
+import { Encounter } from '../../encounter/entities/encounter.entity';
 
 export enum Sex {
   M = 'M',

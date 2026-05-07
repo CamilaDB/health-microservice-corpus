@@ -13,21 +13,34 @@ export class CreateEncounters1775090712368 implements MigrationInterface {
     await queryRunner.query(
       `CREATE TYPE "public"."encounters_ward_enum" AS ENUM('ICU', 'INPATIENT', 'SURGERY', 'EMERGENCY')`,
     );
-    await queryRunner.query(`CREATE TABLE "encounters" (
-            "id" uuid NOT NULL DEFAULT uuid_generate_v4(), 
-            "patientId" uuid NOT NULL, 
-            "adtType" "public"."encounters_adttype_enum" NOT NULL, 
-            "status" "public"."encounters_status_enum" NOT NULL DEFAULT 'ADMITTED', 
-            "ward" "public"."encounters_ward_enum", 
-            "admitDate" date NOT NULL, 
-            "transferDate" date, 
-            "dischargeDate" date, 
-            "created_at" TIMESTAMP NOT NULL DEFAULT now(), 
-            "updated_at" TIMESTAMP NOT NULL DEFAULT now(), 
-            CONSTRAINT "PK_b2e596be58aabc4ccc8f8458b53" PRIMARY KEY ("id"))`);
+    await queryRunner.query(`
+      CREATE TABLE "encounters" (
+        "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
+        "patientId" uuid NOT NULL,
+        "adtType" "public"."encounters_adttype_enum" NOT NULL,
+        "status" "public"."encounters_status_enum" NOT NULL DEFAULT 'ADMITTED',
+        "ward" "public"."encounters_ward_enum",
+        "admitDate" date NOT NULL,
+        "transferDate" date,
+        "dischargeDate" date,
+        "created_at" TIMESTAMP NOT NULL DEFAULT now(),
+        "updated_at" TIMESTAMP NOT NULL DEFAULT now(),
+        CONSTRAINT "PK_b2e596be58aabc4ccc8f8458b53" PRIMARY KEY ("id")
+      )
+    `);
+    await queryRunner.query(`
+      ALTER TABLE "encounters"
+      ADD CONSTRAINT "FK_encounters_patientId"
+      FOREIGN KEY ("patientId")
+      REFERENCES "patients"("id")
+      ON DELETE RESTRICT
+    `);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(
+      `ALTER TABLE "encounters" DROP CONSTRAINT "FK_encounters_patientId"`,
+    );
     await queryRunner.query(`DROP TABLE "encounters"`);
     await queryRunner.query(`DROP TYPE "public"."encounters_ward_enum"`);
     await queryRunner.query(`DROP TYPE "public"."encounters_status_enum"`);

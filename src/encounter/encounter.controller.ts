@@ -9,7 +9,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { EncountersService } from './encounters.service';
+import { EncounterService } from './encounter.service';
 import { CreateEncounterDto } from './dto/create-encounter.dto';
 import { TransitionEncounterStatusDto } from './dto/transition-encounter-status.dto';
 import { ListEncountersByPatientDto } from './dto/list-encounters-by-patient.dto';
@@ -17,8 +17,8 @@ import { Encounter } from './entities/encounter.entity';
 
 @ApiTags('encounters')
 @Controller('encounters')
-export class EncountersController {
-  constructor(private readonly encounterService: EncountersService) {}
+export class EncounterController {
+  constructor(private readonly encounterService: EncounterService) {}
 
   @Post()
   @ApiOperation({ summary: 'Cria um novo episódio de atendimento' })

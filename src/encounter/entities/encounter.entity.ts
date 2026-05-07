@@ -4,11 +4,13 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { Patient } from '../../patient/entities/patient.entity';
+import { Order } from '../../order/entities/order.entity';
 
 export enum AdtType {
   A01 = 'A01', // admissão
@@ -78,7 +80,6 @@ export class Encounter {
   @JoinColumn({ name: 'patientId' })
   patient: Patient;
 
-  // TODO
-  //   @OneToMany(() => Order, (order) => order.encounter)
-  //   orders: Order[];
+  @OneToMany(() => Order, (order) => order.encounter)
+  orders: Order[];
 }
