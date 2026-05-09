@@ -4,11 +4,13 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { Encounter } from '../../encounter/entities/encounter.entity';
+import { Result } from '../../result/entities/result.entity';
 
 export enum ExamType {
   HEMOGRAM = 'HEMOGRAM',
@@ -65,6 +67,6 @@ export class Order {
   @JoinColumn({ name: 'encounterId' })
   encounter: Encounter;
 
-  // @OneToMany(() => Result, (result) => result.order)
-  // results: Result[];
+  @OneToMany(() => Result, (result) => result.order)
+  results: Result[];
 }

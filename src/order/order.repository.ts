@@ -25,8 +25,7 @@ export class OrderRepository {
   ) {}
 
   findById(id: string): Promise<Order | null> {
-    return this.repo.findOne({ where: { id } });
-    // TODO: return this.repo.findOne({ where: { id }, relations: ['results'] });
+    return this.repo.findOne({ where: { id }, relations: ['results'] });
   }
 
   search(dto: SearchOrdersDto): Promise<Order[]> {

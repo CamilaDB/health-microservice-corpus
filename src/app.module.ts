@@ -5,6 +5,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PatientModule } from './patient/patient.module';
 import { EncounterModule } from './encounter/encounter.module';
 import { OrderModule } from './order/order.module';
+import { ResultModule } from './result/result.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { OrderModule } from './order/order.module';
     PatientModule,
     EncounterModule,
     OrderModule,
+    ResultModule,
   ],
   controllers: [],
   providers: [],
