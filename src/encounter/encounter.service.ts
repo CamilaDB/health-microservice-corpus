@@ -16,6 +16,8 @@ import { TransitionEncounterStatusDto } from './dto/transition-encounter-status.
 import { ListEncountersByPatientDto } from './dto/list-encounters-by-patient.dto';
 import { EncounterRepository } from './encounter.repository';
 import { OrderStatus } from 'src/order/entities/order.entity';
+import { AdtMessageDto } from './dto/adt-message.dto';
+import { Patient } from 'src/patient/entities/patient.entity';
 
 @Injectable()
 export class EncounterService {
@@ -63,11 +65,11 @@ export class EncounterService {
       );
     }
 
-    // if (dto.adtType === AdtType.A08 && dto.ward) {
-    //   throw new BadRequestException(
-    //     'Ward must not be informed for ADT A08 (update)',
-    //   );
-    // }
+    if (dto.adtType === AdtType.A08 && dto.ward) {
+      throw new BadRequestException(
+        'Ward must not be informed for ADT A08 (update)',
+      );
+    }
 
     if (dto.adtType === AdtType.A08 && !dto.patientId) {
       throw new BadRequestException(
@@ -180,5 +182,120 @@ export class EncounterService {
 
     encounter.status = nextStatus;
     return this.encounterRepository.save(encounter);
+  }
+
+  async processAdtMessage(
+    dto: AdtMessageDto,
+  ): Promise<{ patient: Patient; encounter?: Encounter }> {
+    // A01 — Admissão: cria paciente se não existir, cria encounter
+    if (dto.adtType === AdtType.A01) {
+      if (!dto.name || !dto.birthDate || !dto.sex || !dto.admitDate) {
+        throw new BadRequestException(
+          'A01 requires: name, birthDate, sex, admitDate',
+        );
+      }
+
+      let patient = await this.patientService.findByCpfOrFail(dto.cpf);
+      if (!patient) {
+        patient = await this.patientService.createPatient({
+          cpf: dto.cpf,
+          name: dto.name,
+          birthDate: dto.birthDate,
+          sex: dto.sex,
+          email: dto.email,
+          phone: dto.phone,
+        });
+      }
+
+      const encounter = await this.createEncounter({
+        patientId: patient.id,
+        adtType: AdtType.A01,
+        admitDate: dto.admitDate,
+        ward: dto.ward,
+      });
+
+      return { patient, encounter };
+    }
+
+    // A02 — Transferência: busca encounter ativo e transiciona
+    if (dto.adtType === AdtType.A02) {
+      if (!dto.ward || !dto.transferDate) {
+        throw new BadRequestException('A02 requires: ward, transferDate');
+      }
+
+      const patient = await this.patientService.findByCpfOrFail(dto.cpf);
+      const encounter = await this.encounterRepository.findActiveByPatient(
+        patient.id,
+      );
+
+      if (!encounter) {
+        throw new NotFoundException(
+          `No active encounter found for patient with cpf ${dto.cpf}`,
+        );
+      }
+
+      const transitionDto: TransitionEncounterStatusDto = {
+        status: EncounterStatus.TRANSFERRED,
+        ward: dto.ward,
+        transferDate: dto.transferDate,
+      };
+
+      const updated = await this.transitionEncounterStatus(
+        encounter.id,
+        transitionDto,
+      );
+      return { patient, encounter: updated };
+    }
+
+    // A03 — Alta: busca encounter ativo e transiciona para discharged
+    if (dto.adtType === AdtType.A03) {
+      if (!dto.dischargeDate) {
+        throw new BadRequestException('A03 requires: dischargeDate');
+      }
+
+      const patient = await this.patientService.findByCpfOrFail(dto.cpf);
+      const encounter = await this.encounterRepository.findActiveByPatient(
+        patient.id,
+      );
+
+      if (!encounter) {
+        throw new NotFoundException(
+          `No active encounter found for patient with cpf ${dto.cpf}`,
+        );
+      }
+
+      const transitionDto: TransitionEncounterStatusDto = {
+        status: EncounterStatus.DISCHARGED,
+        dischargeDate: dto.dischargeDate,
+      };
+
+      const updated = await this.transitionEncounterStatus(
+        encounter.id,
+        transitionDto,
+      );
+      return { patient, encounter: updated };
+    }
+
+    // A08 — Atualização de dados do paciente
+    if (dto.adtType === AdtType.A08) {
+      if (!dto.name && !dto.birthDate && !dto.sex && !dto.email && !dto.phone) {
+        throw new BadRequestException(
+          'A08 requires at least one field to update: name, birthDate, sex, email or phone',
+        );
+      }
+
+      const patient = await this.patientService.findByCpfOrFail(dto.cpf);
+      const updated = await this.patientService.updatePatient(patient.id, {
+        name: dto.name,
+        birthDate: dto.birthDate,
+        sex: dto.sex,
+        email: dto.email,
+        phone: dto.phone,
+      });
+
+      return { patient: updated };
+    }
+
+    throw new BadRequestException(`Unsupported ADT type: ${dto.adtType}`);
   }
 }

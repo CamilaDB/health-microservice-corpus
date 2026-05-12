@@ -50,7 +50,7 @@ export class Result {
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
   referenceMax: number | null;
 
-  @ApiProperty({ example: '2024-01-16' })
+  @ApiProperty({ example: '2026-01-16' })
   @Column({ type: 'date' })
   resultDate: Date;
 

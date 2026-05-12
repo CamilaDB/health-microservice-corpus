@@ -44,9 +44,8 @@ export class ResultService {
     private readonly orderService: OrderService,
   ) {}
 
-  // CCM BAIXA — função 5
   async createResult(dto: CreateResultDto): Promise<Result> {
-    await this.orderService.validateOrderResult(dto.orderId);
+    await this.orderService.validateOrderResult(dto.orderId, dto.status);
 
     const result = this.resultRepository.create({
       ...dto,
@@ -60,7 +59,6 @@ export class ResultService {
     return this.resultRepository.save(result);
   }
 
-  // CCM MÉDIA — função 10
   searchResults(dto: SearchResultsDto): Promise<Result[]> {
     return this.resultRepository.search(dto);
   }
@@ -73,7 +71,6 @@ export class ResultService {
     return result;
   }
 
-  // CCM ALTA — função 15
   async buildResultReport(orderId: string): Promise<ResultReport> {
     const order = await this.orderService.getOrderById(orderId);
     const results = await this.resultRepository.findByOrderId(orderId);
@@ -87,7 +84,6 @@ export class ResultService {
     };
 
     const items: ResultReportItem[] = results.map((result) => {
-      // contabiliza por status
       if (result.status === ResultStatus.PRELIMINARY) {
         summary.preliminary++;
       } else if (result.status === ResultStatus.FINAL) {
@@ -96,7 +92,6 @@ export class ResultService {
         summary.corrected++;
       }
 
-      // calcula flag de referência
       const flag = this.calculateFlag(result);
 
       if (flag === 'LOW' || flag === 'HIGH') {

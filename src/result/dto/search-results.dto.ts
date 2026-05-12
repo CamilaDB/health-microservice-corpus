@@ -25,12 +25,12 @@ export class SearchResultsDto {
   @IsOptional()
   examType?: ExamType;
 
-  @ApiProperty({ example: '2024-01-01', required: false })
+  @ApiProperty({ example: '2026-01-01', required: false })
   @IsDateString()
   @IsOptional()
   dateFrom?: string;
 
-  @ApiProperty({ example: '2024-01-31', required: false })
+  @ApiProperty({ example: '2026-01-31', required: false })
   @IsDateString()
   @IsOptional()
   dateTo?: string;

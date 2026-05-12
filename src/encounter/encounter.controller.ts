@@ -14,6 +14,7 @@ import { CreateEncounterDto } from './dto/create-encounter.dto';
 import { TransitionEncounterStatusDto } from './dto/transition-encounter-status.dto';
 import { ListEncountersByPatientDto } from './dto/list-encounters-by-patient.dto';
 import { Encounter } from './entities/encounter.entity';
+import { AdtMessageDto } from './dto/adt-message.dto';
 
 @ApiTags('encounters')
 @Controller('encounters')
@@ -69,5 +70,12 @@ export class EncounterController {
     @Body() dto: TransitionEncounterStatusDto,
   ): Promise<Encounter> {
     return this.encounterService.transitionEncounterStatus(id, dto);
+  }
+
+  @Post('adt')
+  @ApiOperation({ summary: 'Processa mensagem ADT do Mirth Connect' })
+  @ApiResponse({ status: 201 })
+  processAdt(@Body() dto: AdtMessageDto) {
+    return this.encounterService.processAdtMessage(dto);
   }
 }

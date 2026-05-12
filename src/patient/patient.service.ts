@@ -73,4 +73,12 @@ export class PatientService {
 
     return this.patientRepository.update(patient, updateData);
   }
+
+  async findByCpfOrFail(cpf: string): Promise<Patient> {
+    const patient = await this.patientRepository.findByCpf(cpf);
+    if (!patient) {
+      throw new NotFoundException(`Patient with cpf ${cpf} not found`);
+    }
+    return patient;
+  }
 }

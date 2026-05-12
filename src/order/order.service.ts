@@ -10,6 +10,7 @@ import { EncounterStatus } from '../encounter/entities/encounter.entity';
 import { OrderRepository, PaginatedOrders } from './order.repository';
 import { EncounterService } from 'src/encounter/encounter.service';
 import { SearchOrdersAdvancedDto } from './dto/search-orders-advanced';
+import { ResultStatus } from 'src/result/entities/result.entity';
 
 @Injectable()
 export class OrderService {
@@ -55,7 +56,10 @@ export class OrderService {
     return this.orderRepository.searchAdvanced(dto);
   }
 
-  async validateOrderResult(orderId: string): Promise<Order> {
+  async validateOrderResult(
+    orderId: string,
+    incomingStatus: ResultStatus,
+  ): Promise<Order> {
     const order = await this.getOrderById(orderId);
 
     if (order.status === OrderStatus.CANCELLED) {
@@ -80,8 +84,47 @@ export class OrderService {
       );
     }
 
+    const hasClosedResult = order.results?.some(
+      (r) =>
+        (r as unknown as { status: ResultStatus }).status ===
+          ResultStatus.FINAL ||
+        (r as unknown as { status: ResultStatus }).status ===
+          ResultStatus.CORRECTED,
+    );
+    if (hasClosedResult) {
+      throw new BadRequestException(
+        `Order (id: ${orderId}) already has a final or corrected result`,
+      );
+    }
+
+    if (
+      order.status === OrderStatus.PENDING &&
+      incomingStatus === ResultStatus.FINAL
+    ) {
+      throw new BadRequestException(
+        'Cannot register a FINAL result for a PENDING order. Order must be IN_PROGRESS first',
+      );
+    }
+
+    if (
+      order.status === OrderStatus.PENDING &&
+      incomingStatus === ResultStatus.CORRECTED
+    ) {
+      throw new BadRequestException(
+        'Cannot register a CORRECTED result for a PENDING order',
+      );
+    }
+
     if (order.status === OrderStatus.PENDING) {
       order.status = OrderStatus.IN_PROGRESS;
+      return this.orderRepository.save(order);
+    }
+
+    if (
+      order.status === OrderStatus.IN_PROGRESS &&
+      incomingStatus === ResultStatus.FINAL
+    ) {
+      order.status = OrderStatus.COMPLETED;
       return this.orderRepository.save(order);
     }
 

@@ -20,7 +20,7 @@ export class CreateOrderDto {
   @IsEnum(ExamType)
   examType: ExamType;
 
-  @ApiProperty({ example: '2024-01-15' })
+  @ApiProperty({ example: '2026-01-15' })
   @IsDateString()
   requestedAt: string;
 

@@ -1,29 +1,119 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+# Health Microservice Corpus
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+This project is a health microservice built with [NestJS](https://nestjs.com/) and TypeScript, designed to manage patients, encounters, orders, and results in a healthcare context. It uses PostgreSQL as the database and TypeORM for ORM.
 
-## Description
+## Features
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- **Patient Management**: CRUD operations for patients
+- **Encounter Management**: Track patient encounters and their statuses
+- **Order Management**: Create and manage medical orders
+- **Result Management**: Store and retrieve results for orders
+- **Health Check**: `/health` endpoint for service status
+
+## Project Structure
+
+```
+src/
+  patient/      # Patient domain logic
+  encounter/    # Encounter domain logic
+  order/        # Order domain logic
+  result/       # Result domain logic
+  health/       # Health check endpoint
+  database/     # TypeORM data source and migrations
+```
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 22+
+- npm 10+
+- Docker & Docker Compose (for local DB)
+
+### Installation
+
+```bash
+npm install
+```
+
+### Running the Application
+
+#### Development
+```bash
+npm run start:dev
+```
+
+#### Production
+```bash
+npm run build
+npm run start:prod
+```
+
+#### Using Docker Compose
+```bash
+docker-compose up --build
+```
+The API will be available at `http://localhost:3000` by default.
+
+#### Database
+The service uses PostgreSQL. By default, Docker Compose will start a `health_db` container. Connection details can be configured via environment variables in `docker-compose.yml`.
+
+#### Migrations
+Generate a new migration:
+```bash
+npm run migration:generate -- <MigrationName>
+```
+Run migrations:
+```bash
+npm run migration:run
+```
+Revert last migration:
+```bash
+npm run migration:revert
+```
+
+## Testing
+
+Run all tests:
+```bash
+npm run test
+```
+Run e2e tests:
+```bash
+npm run test:e2e
+```
+Test coverage:
+```bash
+npm run test:cov
+```
+
+## Code Quality
+
+Lint code:
+```bash
+npm run lint
+```
+Format code:
+```bash
+npm run format
+```
+Check complexity (warns if complexity > 1 in services/repositories):
+```bash
+npm run complexity
+```
+
+## API Endpoints
+
+- `GET /health` - Health check
+- `GET /patients`, `POST /patients`, etc. - Patient management
+- `GET /encounters`, `POST /encounters`, etc. - Encounter management
+- `GET /orders`, `POST /orders`, etc. - Order management
+- `GET /results`, `POST /results`, etc. - Result management
+
+## License
+
+This project is UNLICENSED. See the `package.json` for details.
 
 ## Project setup
 

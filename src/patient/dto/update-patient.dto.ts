@@ -9,6 +9,7 @@ import {
   Length,
 } from 'class-validator';
 import { Sex } from '../entities/patient.entity';
+import { IsNotFutureDate } from 'src/common/validators/is-not-future-date.validator';
 
 export class UpdatePatientDto {
   @ApiProperty({ example: 'Maria Silva Santos', required: false })
@@ -19,6 +20,7 @@ export class UpdatePatientDto {
 
   @ApiProperty({ example: '1990-05-20', required: false })
   @IsDateString()
+  @IsNotFutureDate()
   @IsOptional()
   birthDate?: string;
 

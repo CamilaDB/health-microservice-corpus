@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsDateString, IsEnum, IsOptional, IsUUID } from 'class-validator';
-import { ExamType, OrderStatus } from '../entities/order.entity';
+import { OrderStatus } from '../entities/order.entity';
 
 export class SearchOrdersDto {
   @ApiProperty({ enum: OrderStatus, required: false })
@@ -8,12 +8,12 @@ export class SearchOrdersDto {
   @IsOptional()
   status?: OrderStatus;
 
-  @ApiProperty({ example: '2024-01-01', required: false })
+  @ApiProperty({ example: '2026-01-01', required: false })
   @IsDateString()
   @IsOptional()
   dateFrom?: string;
 
-  @ApiProperty({ example: '2024-01-31', required: false })
+  @ApiProperty({ example: '2026-01-31', required: false })
   @IsDateString()
   @IsOptional()
   dateTo?: string;

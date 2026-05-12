@@ -45,7 +45,7 @@ export class Order {
   @Column({ type: 'enum', enum: OrderStatus, default: OrderStatus.PENDING })
   status: OrderStatus;
 
-  @ApiProperty({ example: '2024-01-15' })
+  @ApiProperty({ example: '2026-01-15' })
   @Column({ type: 'date' })
   requestedAt: Date;
 

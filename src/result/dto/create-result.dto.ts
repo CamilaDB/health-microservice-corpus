@@ -43,7 +43,7 @@ export class CreateResultDto {
   @IsOptional()
   referenceMax?: number;
 
-  @ApiProperty({ example: '2024-01-16' })
+  @ApiProperty({ example: '2026-01-16' })
   @IsDateString()
   resultDate: string;
 
