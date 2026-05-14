@@ -1,0 +1,5 @@
+export enum EncounterStatus {
+  ADMITTED = 'ADMITTED',
+  TRANSFERRED = 'TRANSFERRED',
+  DISCHARGED = 'DISCHARGED',
+}
