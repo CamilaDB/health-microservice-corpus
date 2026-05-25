@@ -1,0 +1,16 @@
+{
+  "name": "llm-unit-test-generation-runner",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "extract": "tsx runner/ast/extract-focused-source.ts"
+  },
+  "author": "Camila Druzian Bazzo",
+  "license": "ISC",
+  "devDependencies": {
+    "ts-morph": "^28.0.0",
+    "tsx": "^4.22.0",
+    "typescript": "^6.0.3"
+  }
+}

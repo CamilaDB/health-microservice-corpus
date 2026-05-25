@@ -15,7 +15,7 @@ import { Patient } from 'src/patient/entities/patient.entity';
 import { EncounterStatus } from './enums/encounter-status.enum';
 import { AdtType } from './enums/adt-type.enum';
 import { Ward } from './enums/ward.enum';
-import { OrderStatus } from 'src/order/enums/oreder-status.enum';
+import { OrderStatus } from 'src/order/enums/order-status.enum';
 
 @Injectable()
 export class EncounterService {

@@ -10,7 +10,7 @@ import {
   Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { OrderStatus } from '../enums/oreder-status.enum';
+import { OrderStatus } from '../enums/order-status.enum';
 import { ExamType } from '../enums/exam-type.enum';
 import { OrderSortField } from '../enums/order-sort-field.enum';
 import { SortDirection } from 'src/common/enums/sort-direction.enum';

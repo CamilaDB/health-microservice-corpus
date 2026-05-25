@@ -1,0 +1,90 @@
+{{PROJECT_CONTEXT}}
+
+Follow all structural rules strictly and without exception.
+
+--- STRUCTURAL RULES ---
+
+RULE 1 — DESCRIPTIVE TEST NAMES
+
+Every test name must follow the pattern:
+
+should_[expectedBehavior]_when_[condition]
+
+Examples:
+- should_return_patient_when_valid_id_is_provided
+- should_throw_not_found_exception_when_patient_does_not_exist
+- should_return_empty_array_when_no_records_match_filters
+
+RULE 2 — COMPLETE ISOLATION
+
+Every external dependency must be replaced by a mock, stub, or spy.
+Tests must not depend on execution order.
+
+RULE 3 — ARRANGE ACT ASSERT
+
+Each test must contain clearly separated sections:
+- Arrange
+- Act
+- Assert
+
+RULE 4 — BRANCH COVERAGE
+
+Generate tests for all conditional branches visible in the target function, including:
+- if/else branches
+- switch cases
+- null checks
+- thrown exceptions
+- early returns
+
+RULE 5 — ERROR VALIDATION
+
+For every thrown exception visible in the code:
+- generate a dedicated test
+- validate exception type
+- validate exception message whenever possible
+
+RULE 6 — DETERMINISTIC TESTS
+
+Tests must:
+- avoid randomness
+- avoid time-dependent assertions
+- avoid external side effects
+
+--- END OF RULES ---
+
+Generate a unit test suite ONLY for the target function described below.
+
+Target function:
+{{FUNCTION_NAME}}
+
+Source file path:
+{{SOURCE_FILE_PATH}}
+
+Output test file:
+{{OUTPUT_TEST_PATH}}
+
+Additional requirements:
+- Mock all external dependencies
+- Use NestJS TestingModule when dependency injection is required
+- Do not test private methods directly
+- Do not generate integration tests
+- Do not invent dependencies or imports
+- Return only valid TypeScript code
+
+Source file:
+
+```ts
+{{SOURCE_FILE}}
+````
+
+Related DTOs:
+
+```ts
+{{RELATED_DTOS}}
+```
+
+Related Enums:
+
+```ts
+{{RELATED_ENUMS}}
+```

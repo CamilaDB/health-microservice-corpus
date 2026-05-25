@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsDateString, IsEnum, IsOptional, IsUUID } from 'class-validator';
-import { OrderStatus } from '../enums/oreder-status.enum';
+import { OrderStatus } from '../enums/order-status.enum';
 
 export class SearchOrdersDto {
   @ApiProperty({ enum: OrderStatus, required: false })

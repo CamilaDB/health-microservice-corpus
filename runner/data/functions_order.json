@@ -1,0 +1,59 @@
+[
+  {
+    "name": "validateOrderResult",
+    "module": "order",
+    "layer": "service",
+    "source_file": "src/order/order.service.ts",
+    "line": 60,
+    "ccm": 13,
+    "range": "high",
+    "dto_files": [
+      "src/order/dto/create-order.dto.ts",
+      "src/order/dto/search-orders.dto.ts"
+    ],
+    "enum_files": [
+      "src/order/enums/exam-type.enum.ts",
+      "src/order/enums/order-sort-field.enum.ts",
+      "src/order/enums/oreder-status.enum.ts"
+    ],
+    "test_output_file": "src/order/order.service.spec.ts"
+  },
+  {
+    "name": "createOrder",
+    "module": "order",
+    "layer": "service",
+    "source_file": "src/order/order.service.ts",
+    "line": 31,
+    "ccm": 3,
+    "range": "low",
+    "dto_files": [
+      "src/order/dto/create-order.dto.ts",
+      "src/order/dto/search-orders.dto.ts"
+    ],
+    "enum_files": [
+      "src/order/enums/exam-type.enum.ts",
+      "src/order/enums/order-sort-field.enum.ts",
+      "src/order/enums/oreder-status.enum.ts"
+    ],
+    "test_output_file": "src/order/order.service.spec.ts"
+  },
+  {
+    "name": "getOrderById",
+    "module": "order",
+    "layer": "service",
+    "source_file": "src/order/order.service.ts",
+    "line": 23,
+    "ccm": 2,
+    "range": "low",
+    "dto_files": [
+      "src/order/dto/create-order.dto.ts",
+      "src/order/dto/search-orders.dto.ts"
+    ],
+    "enum_files": [
+      "src/order/enums/exam-type.enum.ts",
+      "src/order/enums/order-sort-field.enum.ts",
+      "src/order/enums/oreder-status.enum.ts"
+    ],
+    "test_output_file": "src/order/order.service.spec.ts"
+  }
+]

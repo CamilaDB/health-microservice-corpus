@@ -1,0 +1,47 @@
+[
+  {
+    "name": "calculateFlag",
+    "module": "result",
+    "layer": "service",
+    "source_file": "src/result/result.service.ts",
+    "line": 124,
+    "ccm": 7,
+    "range": "medium",
+    "dto_files": [
+      "src/result/dto/create-result.dto.ts",
+      "src/result/dto/search-results.dto.ts"
+    ],
+    "enum_files": ["src/result/enums/result-status.enum.ts"],
+    "test_output_file": "src/result/result.service.spec.ts"
+  },
+  {
+    "name": "createResult",
+    "module": "result",
+    "layer": "service",
+    "source_file": "src/result/result.service.ts",
+    "line": 48,
+    "ccm": 5,
+    "range": "medium",
+    "dto_files": [
+      "src/result/dto/create-result.dto.ts",
+      "src/result/dto/search-results.dto.ts"
+    ],
+    "enum_files": ["src/result/enums/result-status.enum.ts"],
+    "test_output_file": "src/result/result.service.spec.ts"
+  },
+  {
+    "name": "getResultById",
+    "module": "result",
+    "layer": "service",
+    "source_file": "src/result/result.service.ts",
+    "line": 67,
+    "ccm": 2,
+    "range": "low",
+    "dto_files": [
+      "src/result/dto/create-result.dto.ts",
+      "src/result/dto/search-results.dto.ts"
+    ],
+    "enum_files": ["src/result/enums/result-status.enum.ts"],
+    "test_output_file": "src/result/result.service.spec.ts"
+  }
+]

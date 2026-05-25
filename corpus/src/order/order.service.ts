@@ -10,7 +10,7 @@ import { OrderRepository, PaginatedOrders } from './order.repository';
 import { EncounterService } from 'src/encounter/encounter.service';
 import { SearchOrdersAdvancedDto } from './dto/search-orders-advanced';
 import { EncounterStatus } from 'src/encounter/enums/encounter-status.enum';
-import { OrderStatus } from './enums/oreder-status.enum';
+import { OrderStatus } from './enums/order-status.enum';
 import { ResultStatus } from 'src/result/enums/result-status.enum';
 
 @Injectable()

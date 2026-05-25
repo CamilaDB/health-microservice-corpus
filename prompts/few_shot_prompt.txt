@@ -1,0 +1,77 @@
+{{PROJECT_CONTEXT}}
+
+Study the following examples of functions and their corresponding unit tests.
+
+--- EXAMPLE 1 ---
+
+Function:
+
+```ts
+{{EXAMPLE_CODE_1}}
+````
+
+Test suite:
+
+```ts
+{{EXAMPLE_TEST_1}}
+```
+
+--- EXAMPLE 2 ---
+
+Function:
+
+```ts
+{{EXAMPLE_CODE_2}}
+```
+
+Test suite:
+
+```ts
+{{EXAMPLE_TEST_2}}
+```
+
+--- END OF EXAMPLES ---
+
+Generate a unit test suite ONLY for the target function described below.
+
+Target function:
+{{FUNCTION_NAME}}
+
+Source file path:
+{{SOURCE_FILE_PATH}}
+
+Output test file:
+{{OUTPUT_TEST_PATH}}
+
+Requirements:
+
+* Follow the same quality standard demonstrated in the examples
+* Generate tests ONLY for the target function
+* Mock all external dependencies
+* Use NestJS TestingModule when dependency injection is required
+* Cover the happy path
+* Cover all relevant edge cases visible in the code
+* Cover all exceptions and error conditions visible in the code
+* Keep tests isolated and deterministic
+* Use descriptive test names
+* Do not test private methods directly
+* Do not generate integration tests
+* Do not invent dependencies or imports
+
+Source file:
+
+```ts
+{{SOURCE_FILE}}
+```
+
+Related DTOs:
+
+```ts
+{{RELATED_DTOS}}
+```
+
+Related Enums:
+
+```ts
+{{RELATED_ENUMS}}
+```
