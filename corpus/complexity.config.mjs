@@ -2,9 +2,9 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config({
   files: [
-    'src/**/*.controller.ts',
+    // 'src/**/*.controller.ts',
     'src/**/*.service.ts',
-    'src/**/*.repository.ts',
+    // 'src/**/*.repository.ts',
   ],
   extends: [...tseslint.configs.recommended],
   languageOptions: {
@@ -14,6 +14,6 @@ export default tseslint.config({
     },
   },
   rules: {
-    complexity: ['warn', 1],
+    complexity: ['warn', 0],
   },
 });

@@ -15,7 +15,10 @@ import { Patient } from 'src/patient/entities/patient.entity';
 import { EncounterStatus } from './enums/encounter-status.enum';
 import { AdtType } from './enums/adt-type.enum';
 import { Ward } from './enums/ward.enum';
-import { OrderStatus } from 'src/order/enums/oreder-status.enum';
+import { OrderStatus } from 'src/order/enums/order-status.enum';
+import { UpdateEncounterDto } from './dto/update-encounter.dto';
+import { ResultStatus } from 'src/result/enums/result-status.enum';
+import { EncounterSummary } from './interfaces/encounter.interface';
 
 @Injectable()
 export class EncounterService {
@@ -25,7 +28,11 @@ export class EncounterService {
   ) {}
 
   async createEncounter(dto: CreateEncounterDto): Promise<Encounter> {
-    await this.patientService.getPatientById(dto.patientId);
+    const patient = await this.patientService.getPatientById(dto.patientId);
+
+    if (!patient.active) {
+      throw new BadRequestException('Cannot admit an inactive patient');
+    }
 
     const active = await this.encounterRepository.findActiveByPatient(
       dto.patientId,
@@ -295,5 +302,127 @@ export class EncounterService {
     }
 
     throw new BadRequestException(`Unsupported ADT type: ${dto.adtType}`);
+  }
+
+  async updateEncounter(
+    id: string,
+    dto: UpdateEncounterDto,
+  ): Promise<Encounter> {
+    const encounter = await this.getEncounterById(id);
+
+    if (encounter.status === EncounterStatus.DISCHARGED) {
+      throw new BadRequestException('Cannot update a discharged encounter');
+    }
+
+    if (dto.admitDate !== undefined) {
+      if (encounter.status !== EncounterStatus.ADMITTED) {
+        throw new BadRequestException(
+          'admitDate can only be updated when encounter is ADMITTED',
+        );
+      }
+
+      const admitDate = new Date(dto.admitDate);
+      const now = new Date();
+
+      if (admitDate > now) {
+        throw new BadRequestException('admitDate cannot be a future date');
+      }
+
+      if (
+        encounter.transferDate &&
+        admitDate >= new Date(encounter.transferDate)
+      ) {
+        throw new BadRequestException('admitDate must be before transferDate');
+      }
+
+      encounter.admitDate = admitDate;
+    }
+
+    if (dto.ward !== undefined) {
+      if (dto.ward === encounter.ward) {
+        throw new BadRequestException(
+          `Ward is already ${encounter.ward}. Use status transition for transfers`,
+        );
+      }
+      encounter.ward = dto.ward;
+    }
+
+    return this.encounterRepository.save(encounter);
+  }
+
+  async buildEncounterSummary(id: string): Promise<EncounterSummary> {
+    const encounter = await this.getEncounterById(id);
+    const patient = await this.patientService.getPatientById(
+      encounter.patientId,
+    );
+
+    const admitDate = new Date(encounter.admitDate);
+    const now = new Date();
+    const activeDays = Math.floor(
+      (now.getTime() - admitDate.getTime()) / (1000 * 60 * 60 * 24),
+    );
+
+    const orderSummary = {
+      total: 0,
+      pending: 0,
+      inProgress: 0,
+      completed: 0,
+      cancelled: 0,
+    };
+
+    const resultSummary = {
+      total: 0,
+      abnormal: 0,
+      preliminary: 0,
+    };
+
+    for (const order of encounter.orders ?? []) {
+      orderSummary.total++;
+
+      if (order.status === OrderStatus.PENDING) orderSummary.pending++;
+      else if (order.status === OrderStatus.IN_PROGRESS)
+        orderSummary.inProgress++;
+      else if (order.status === OrderStatus.COMPLETED) orderSummary.completed++;
+      else if (order.status === OrderStatus.CANCELLED) orderSummary.cancelled++;
+
+      for (const result of order.results ?? []) {
+        resultSummary.total++;
+
+        if (result.status === ResultStatus.PRELIMINARY) {
+          resultSummary.preliminary++;
+        }
+
+        const value = Number(result.value);
+        const refMin = result.referenceMin ? Number(result.referenceMin) : null;
+        const refMax = result.referenceMax ? Number(result.referenceMax) : null;
+
+        const isAbnormal =
+          (refMin !== null && value < refMin) ||
+          (refMax !== null && value > refMax);
+
+        if (isAbnormal) resultSummary.abnormal++;
+      }
+    }
+
+    const hasAbnormalResults = resultSummary.abnormal > 0;
+
+    let riskFlag: 'LOW' | 'MEDIUM' | 'HIGH';
+    if (hasAbnormalResults && activeDays > 7) {
+      riskFlag = 'HIGH';
+    } else if (hasAbnormalResults || activeDays > 7) {
+      riskFlag = 'MEDIUM';
+    } else {
+      riskFlag = 'LOW';
+    }
+
+    return {
+      encounter,
+      patient,
+      activeDays,
+      orders: orderSummary,
+      results: resultSummary,
+      hasAbnormalResults,
+      riskFlag,
+    };
   }
 }

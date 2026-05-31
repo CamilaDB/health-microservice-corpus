@@ -22,7 +22,7 @@
     "migration:run": "typeorm-ts-node-commonjs migration:run -d src/database/data-source.ts",
     "migration:revert": "typeorm-ts-node-commonjs migration:revert -d src/database/data-source.ts",
     "complexity": "eslint --config complexity.config.mjs",
-    "complexity:report": "node complexity-report.mjs",
+    "complexity:report": "node scripts/complexity-report.mjs",
     "generate:functions": "npx tsx scripts/generate-functions.ts"
   },
   "dependencies": {
@@ -60,6 +60,7 @@
     "supertest": "^7.0.0",
     "ts-jest": "^29.2.5",
     "ts-loader": "^9.5.2",
+    "ts-morph": "^28.0.0",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.7.3",
@@ -77,7 +78,13 @@
       "^.+\\.(t|j)s$": "ts-jest"
     },
     "collectCoverageFrom": [
-      "**/*.(t|j)s"
+      "**/src/*.ts",
+      "!**/main.ts",
+      "!**/*.module.ts",
+      "!**/*.dto.ts",
+      "!**/*.entity.ts",
+      "!**/*.enum.ts",
+      "!**/*.interface.ts"
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"

@@ -6,14 +6,9 @@ import { SearchOrdersDto } from './dto/search-orders.dto';
 import { SearchOrdersAdvancedDto } from './dto/search-orders-advanced';
 import { OrderSortField } from './enums/order-sort-field.enum';
 import { SortDirection } from 'src/common/enums/sort-direction.enum';
-
-export interface PaginatedOrders {
-  data: Order[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}
+import { PaginatedOrders } from './interfaces/order.interface';
+import { ExamType } from './enums/exam-type.enum';
+import { OrderStatus } from './enums/order-status.enum';
 
 @Injectable()
 export class OrderRepository {
@@ -76,6 +71,31 @@ export class OrderRepository {
       limit,
       totalPages: Math.ceil(total / limit),
     };
+  }
+
+  existsPendingOrder(
+    encounterId: string,
+    examType: ExamType,
+  ): Promise<boolean> {
+    return this.repo.exists({
+      where: { encounterId, examType, status: OrderStatus.PENDING },
+    });
+  }
+
+  async cancelOpenOrdersByEncounter(encounterId: string): Promise<number> {
+    const result = await this.repo
+      .createQueryBuilder()
+      .update(Order)
+      .set({ status: OrderStatus.CANCELLED })
+      .where('encounterId = :encounterId', {
+        encounterId,
+      })
+      .andWhere('status IN (:...statuses)', {
+        statuses: [OrderStatus.PENDING, OrderStatus.IN_PROGRESS],
+      })
+      .execute();
+
+    return result.affected ?? 0;
   }
 
   save(order: Order): Promise<Order> {

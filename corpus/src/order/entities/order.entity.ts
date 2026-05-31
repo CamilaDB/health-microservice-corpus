@@ -12,7 +12,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Encounter } from '../../encounter/entities/encounter.entity';
 import { Result } from '../../result/entities/result.entity';
 import { ExamType } from '../enums/exam-type.enum';
-import { OrderStatus } from '../enums/oreder-status.enum';
+import { OrderStatus } from '../enums/order-status.enum';
 
 @Entity('orders')
 export class Order {
