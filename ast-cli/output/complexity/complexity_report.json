@@ -1,0 +1,209 @@
+{
+  "generated_at": "2026-06-02T03:49:50.292Z",
+  "total": 25,
+  "high": 7,
+  "medium": 5,
+  "low": 13,
+  "functions": [
+    {
+      "name": "updateResult",
+      "class_name": "ResultService",
+      "module": "result",
+      "layer": "service",
+      "ccm": 26,
+      "range": "high"
+    },
+    {
+      "name": "processAdtMessage",
+      "class_name": "EncounterService",
+      "module": "encounter",
+      "layer": "service",
+      "ccm": 20,
+      "range": "high"
+    },
+    {
+      "name": "buildEncounterSummary",
+      "class_name": "EncounterService",
+      "module": "encounter",
+      "layer": "service",
+      "ccm": 20,
+      "range": "high"
+    },
+    {
+      "name": "transitionEncounterStatus",
+      "class_name": "EncounterService",
+      "module": "encounter",
+      "layer": "service",
+      "ccm": 18,
+      "range": "high"
+    },
+    {
+      "name": "buildResultReport",
+      "class_name": "ResultService",
+      "module": "result",
+      "layer": "service",
+      "ccm": 17,
+      "range": "high"
+    },
+    {
+      "name": "validateOrderResult",
+      "class_name": "OrderService",
+      "module": "order",
+      "layer": "service",
+      "ccm": 13,
+      "range": "high"
+    },
+    {
+      "name": "validateEncounterFields",
+      "class_name": "EncounterService",
+      "module": "encounter",
+      "layer": "service",
+      "ccm": 11,
+      "range": "high"
+    },
+    {
+      "name": "updatePatient",
+      "class_name": "PatientService",
+      "module": "patient",
+      "layer": "service",
+      "ccm": 10,
+      "range": "medium"
+    },
+    {
+      "name": "updateEncounter",
+      "class_name": "EncounterService",
+      "module": "encounter",
+      "layer": "service",
+      "ccm": 9,
+      "range": "medium"
+    },
+    {
+      "name": "updateOrder",
+      "class_name": "OrderService",
+      "module": "order",
+      "layer": "service",
+      "ccm": 7,
+      "range": "medium"
+    },
+    {
+      "name": "createOrder",
+      "class_name": "OrderService",
+      "module": "order",
+      "layer": "service",
+      "ccm": 5,
+      "range": "medium"
+    },
+    {
+      "name": "createResult",
+      "class_name": "ResultService",
+      "module": "result",
+      "layer": "service",
+      "ccm": 5,
+      "range": "medium"
+    },
+    {
+      "name": "createEncounter",
+      "class_name": "EncounterService",
+      "module": "encounter",
+      "layer": "service",
+      "ccm": 4,
+      "range": "low"
+    },
+    {
+      "name": "createPatient",
+      "class_name": "PatientService",
+      "module": "patient",
+      "layer": "service",
+      "ccm": 4,
+      "range": "low"
+    },
+    {
+      "name": "getEncounterById",
+      "class_name": "EncounterService",
+      "module": "encounter",
+      "layer": "service",
+      "ccm": 2,
+      "range": "low"
+    },
+    {
+      "name": "getOrderById",
+      "class_name": "OrderService",
+      "module": "order",
+      "layer": "service",
+      "ccm": 2,
+      "range": "low"
+    },
+    {
+      "name": "cancelOrder",
+      "class_name": "OrderService",
+      "module": "order",
+      "layer": "service",
+      "ccm": 2,
+      "range": "low"
+    },
+    {
+      "name": "getPatientById",
+      "class_name": "PatientService",
+      "module": "patient",
+      "layer": "service",
+      "ccm": 2,
+      "range": "low"
+    },
+    {
+      "name": "findByCpfOrFail",
+      "class_name": "PatientService",
+      "module": "patient",
+      "layer": "service",
+      "ccm": 2,
+      "range": "low"
+    },
+    {
+      "name": "getResultById",
+      "class_name": "ResultService",
+      "module": "result",
+      "layer": "service",
+      "ccm": 2,
+      "range": "low"
+    },
+    {
+      "name": "listEncountersByPatient",
+      "class_name": "EncounterService",
+      "module": "encounter",
+      "layer": "service",
+      "ccm": 1,
+      "range": "low"
+    },
+    {
+      "name": "searchOrders",
+      "class_name": "OrderService",
+      "module": "order",
+      "layer": "service",
+      "ccm": 1,
+      "range": "low"
+    },
+    {
+      "name": "searchOrdersAdvanced",
+      "class_name": "OrderService",
+      "module": "order",
+      "layer": "service",
+      "ccm": 1,
+      "range": "low"
+    },
+    {
+      "name": "listPatients",
+      "class_name": "PatientService",
+      "module": "patient",
+      "layer": "service",
+      "ccm": 1,
+      "range": "low"
+    },
+    {
+      "name": "searchResults",
+      "class_name": "ResultService",
+      "module": "result",
+      "layer": "service",
+      "ccm": 1,
+      "range": "low"
+    }
+  ]
+}

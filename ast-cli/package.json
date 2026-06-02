@@ -1,0 +1,16 @@
+{
+  "name": "ast-cli",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "cli": "tsx index.ts"
+  },
+  "dependencies": {
+    "ts-morph": "^28.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "tsx": "^4.22.3",
+    "typescript": "^6.0.3"
+  }
+}
