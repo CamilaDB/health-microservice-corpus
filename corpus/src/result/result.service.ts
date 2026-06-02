@@ -1,42 +1,20 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Result } from './entities/result.entity';
 import { OrderService } from '../order/order.service';
 import { CreateResultDto } from './dto/create-result.dto';
 import { SearchResultsDto } from './dto/search-results.dto';
 import { ResultRepository } from './result.repository';
-import { ExamType } from 'src/order/enums/exam-type.enum';
 import { ResultStatus } from './enums/result-status.enum';
-
-export interface ReferenceRange {
-  min: number;
-  max: number;
-}
-
-export interface ResultReportItem {
-  resultId: string;
-  examType: ExamType;
-  value: number;
-  unit: string;
-  status: ResultStatus;
-  referenceMin: number | null;
-  referenceMax: number | null;
-  flag: 'LOW' | 'NORMAL' | 'HIGH' | 'UNKNOWN';
-  sourceSystem: string | null;
-  resultDate: Date;
-}
-
-export interface ResultReport {
-  orderId: string;
-  examType: ExamType;
-  items: ResultReportItem[];
-  summary: {
-    total: number;
-    preliminary: number;
-    final: number;
-    corrected: number;
-    abnormal: number;
-  };
-}
+import {
+  ResultReport,
+  ResultReportItem,
+} from './interfaces/result-report.interface';
+import { ExamType } from 'src/order/enums/exam-type.enum';
+import { UpdateResultDto } from './dto/update-result.dto';
 
 @Injectable()
 export class ResultService {
@@ -76,6 +54,18 @@ export class ResultService {
     const order = await this.orderService.getOrderById(orderId);
     const results = await this.resultRepository.findByOrderId(orderId);
 
+    if (results.length === 0) {
+      throw new NotFoundException(`No results found for order ${orderId}`);
+    }
+
+    const defaultRanges: Partial<
+      Record<ExamType, { min: number; max: number }>
+    > = {
+      [ExamType.GLUCOSE]: { min: 70, max: 99 },
+      [ExamType.CREATININE]: { min: 0.6, max: 1.2 },
+      [ExamType.TSH]: { min: 0.4, max: 4.0 },
+    };
+
     const summary = {
       total: results.length,
       preliminary: 0,
@@ -85,57 +75,133 @@ export class ResultService {
     };
 
     const items: ResultReportItem[] = results.map((result) => {
-      if (result.status === ResultStatus.PRELIMINARY) {
-        summary.preliminary++;
-      } else if (result.status === ResultStatus.FINAL) {
-        summary.final++;
-      } else if (result.status === ResultStatus.CORRECTED) {
-        summary.corrected++;
+      if (result.status === ResultStatus.PRELIMINARY) summary.preliminary++;
+      else if (result.status === ResultStatus.FINAL) summary.final++;
+      else if (result.status === ResultStatus.CORRECTED) summary.corrected++;
+
+      // resolve referências — usa as do result, cai para padrão por examType, ou null
+      const refMin =
+        result.referenceMin !== null
+          ? Number(result.referenceMin)
+          : (defaultRanges[order.examType]?.min ?? null);
+
+      const refMax =
+        result.referenceMax !== null
+          ? Number(result.referenceMax)
+          : (defaultRanges[order.examType]?.max ?? null);
+
+      // calcula flag inline
+      const value = Number(result.value);
+      let flag: 'LOW' | 'NORMAL' | 'HIGH' | 'UNKNOWN';
+
+      if (refMin === null && refMax === null) {
+        flag = 'UNKNOWN';
+      } else if (refMin !== null && value < refMin) {
+        flag = 'LOW';
+      } else if (refMax !== null && value > refMax) {
+        flag = 'HIGH';
+      } else {
+        flag = 'NORMAL';
       }
 
-      const flag = this.calculateFlag(result);
-
-      if (flag === 'LOW' || flag === 'HIGH') {
-        summary.abnormal++;
-      }
+      if (flag === 'LOW' || flag === 'HIGH') summary.abnormal++;
 
       return {
         resultId: result.id,
         examType: order.examType,
-        value: Number(result.value),
+        value,
         unit: result.unit,
         status: result.status,
-        referenceMin: result.referenceMin ? Number(result.referenceMin) : null,
-        referenceMax: result.referenceMax ? Number(result.referenceMax) : null,
+        referenceMin: refMin,
+        referenceMax: refMax,
         flag,
         sourceSystem: result.sourceSystem,
         resultDate: result.resultDate,
       };
     });
 
-    return {
-      orderId,
-      examType: order.examType,
-      items,
-      summary,
-    };
+    return { orderId, examType: order.examType, items, summary };
   }
 
-  private calculateFlag(result: Result): 'LOW' | 'NORMAL' | 'HIGH' | 'UNKNOWN' {
-    const value = Number(result.value);
+  async updateResult(id: string, dto: UpdateResultDto): Promise<Result> {
+    const result = await this.getResultById(id);
 
-    if (result.referenceMin === null && result.referenceMax === null) {
-      return 'UNKNOWN';
+    if (result.status === ResultStatus.CORRECTED && dto.status !== undefined) {
+      throw new BadRequestException(
+        'Cannot change status of a CORRECTED result — it is terminal',
+      );
     }
 
-    if (result.referenceMin !== null && value < Number(result.referenceMin)) {
-      return 'LOW';
+    if (dto.status !== undefined) {
+      const validTransitions: Record<ResultStatus, ResultStatus[]> = {
+        [ResultStatus.PRELIMINARY]: [
+          ResultStatus.FINAL,
+          ResultStatus.CORRECTED,
+        ],
+        [ResultStatus.FINAL]: [ResultStatus.CORRECTED],
+        [ResultStatus.CORRECTED]: [],
+      };
+
+      if (!validTransitions[result.status].includes(dto.status)) {
+        throw new BadRequestException(
+          `Invalid status transition from ${result.status} to ${dto.status}`,
+        );
+      }
     }
 
-    if (result.referenceMax !== null && value > Number(result.referenceMax)) {
-      return 'HIGH';
+    if (dto.value !== undefined && result.status !== ResultStatus.PRELIMINARY) {
+      throw new BadRequestException(
+        'Cannot update value of a non-preliminary result',
+      );
     }
 
-    return 'NORMAL';
+    if (dto.unit !== undefined && result.status !== ResultStatus.PRELIMINARY) {
+      throw new BadRequestException(
+        'Cannot update unit of a non-preliminary result',
+      );
+    }
+
+    if (
+      dto.referenceMin !== undefined &&
+      result.status === ResultStatus.FINAL
+    ) {
+      throw new BadRequestException(
+        'Cannot update referenceMin of a final result',
+      );
+    }
+
+    if (
+      dto.referenceMax !== undefined &&
+      result.status === ResultStatus.FINAL
+    ) {
+      throw new BadRequestException(
+        'Cannot update referenceMax of a final result',
+      );
+    }
+
+    const newMin =
+      dto.referenceMin ??
+      (result.referenceMin ? Number(result.referenceMin) : null);
+    const newMax =
+      dto.referenceMax ??
+      (result.referenceMax ? Number(result.referenceMax) : null);
+
+    if (newMin !== null && newMax !== null && newMin >= newMax) {
+      throw new BadRequestException(
+        'referenceMin must be less than referenceMax',
+      );
+    }
+
+    const updateData: Partial<Result> = {
+      ...(dto.status !== undefined && { status: dto.status }),
+      ...(dto.value !== undefined && { value: dto.value }),
+      ...(dto.unit !== undefined && { unit: dto.unit }),
+      ...(dto.referenceMin !== undefined && { referenceMin: dto.referenceMin }),
+      ...(dto.referenceMax !== undefined && { referenceMax: dto.referenceMax }),
+      ...(dto.notes !== undefined && { notes: dto.notes }),
+    };
+
+    Object.assign(result, updateData);
+    return this.resultRepository.save(result);
   }
 }

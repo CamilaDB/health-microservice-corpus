@@ -15,6 +15,8 @@ import { TransitionEncounterStatusDto } from './dto/transition-encounter-status.
 import { ListEncountersByPatientDto } from './dto/list-encounters-by-patient.dto';
 import { Encounter } from './entities/encounter.entity';
 import { AdtMessageDto } from './dto/adt-message.dto';
+import { UpdateEncounterDto } from './dto/update-encounter.dto';
+import { EncounterSummary } from './interfaces/encounter.interface';
 
 @ApiTags('encounters')
 @Controller('encounters')
@@ -77,5 +79,23 @@ export class EncounterController {
   @ApiResponse({ status: 201 })
   processAdt(@Body() dto: AdtMessageDto) {
     return this.encounterService.processAdtMessage(dto);
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Corrige dados do episódio (ward, admitDate)' })
+  @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
+  @ApiResponse({ status: 200, type: Encounter })
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateEncounterDto,
+  ): Promise<Encounter> {
+    return this.encounterService.updateEncounter(id, dto);
+  }
+
+  @Get(':id/summary')
+  @ApiOperation({ summary: 'Resumo consolidado do episódio com risco clínico' })
+  @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
+  summary(@Param('id', ParseUUIDPipe) id: string): Promise<EncounterSummary> {
+    return this.encounterService.buildEncounterSummary(id);
   }
 }

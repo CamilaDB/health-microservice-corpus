@@ -1,17 +1,21 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { Order } from './entities/order.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { SearchOrdersDto } from './dto/search-orders.dto';
-import { OrderRepository, PaginatedOrders } from './order.repository';
+import { OrderRepository } from './order.repository';
 import { EncounterService } from 'src/encounter/encounter.service';
 import { SearchOrdersAdvancedDto } from './dto/search-orders-advanced';
 import { EncounterStatus } from 'src/encounter/enums/encounter-status.enum';
 import { OrderStatus } from './enums/order-status.enum';
 import { ResultStatus } from 'src/result/enums/result-status.enum';
+import { PaginatedOrders } from './interfaces/order.interface';
+import { UpdateOrderDto } from './dto/update-order.dto';
+import { OrderStatus } from './enums/order-status.enum';
 
 @Injectable()
 export class OrderService {
@@ -36,6 +40,23 @@ export class OrderService {
     if (encounter.status === EncounterStatus.DISCHARGED) {
       throw new BadRequestException(
         'Cannot create order for a discharged encounter',
+      );
+    }
+
+    if (new Date(dto.requestedAt) < new Date(encounter.admitDate)) {
+      throw new BadRequestException(
+        'Order date cannot be before admission date',
+      );
+    }
+
+    const existing = await this.orderRepository.existsPendingOrder(
+      dto.encounterId,
+      dto.examType,
+    );
+
+    if (existing) {
+      throw new ConflictException(
+        'A pending order for this exam already exists',
       );
     }
 
@@ -130,5 +151,50 @@ export class OrderService {
     }
 
     return order;
+  }
+
+  async cancelOrder(id: string): Promise<Order> {
+    const order = await this.getOrderById(id);
+    if (order.status === OrderStatus.CANCELLED) {
+      throw new BadRequestException(`Order ${id} is already cancelled`);
+    }
+
+    order.status = OrderStatus.CANCELLED;
+    return this.orderRepository.save(order);
+  }
+
+  async updateOrder(id: string, dto: UpdateOrderDto): Promise<Order> {
+    const order = await this.getOrderById(id);
+
+    if (
+      order.status === OrderStatus.CANCELLED ||
+      order.status === OrderStatus.COMPLETED
+    ) {
+      throw new BadRequestException(
+        `Cannot update order with status ${order.status}`,
+      );
+    }
+
+    if (
+      order.status === OrderStatus.IN_PROGRESS &&
+      dto.requestedBy !== undefined
+    ) {
+      throw new BadRequestException(
+        'Cannot update requestedBy for an order in progress. Only notes can be updated',
+      );
+    }
+
+    const updateData: Partial<Order> = {};
+
+    if (dto.requestedBy !== undefined) {
+      updateData.requestedBy = dto.requestedBy;
+    }
+
+    if (dto.notes !== undefined) {
+      updateData.notes = dto.notes;
+    }
+
+    Object.assign(order, updateData);
+    return this.orderRepository.save(order);
   }
 }

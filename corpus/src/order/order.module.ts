@@ -3,13 +3,13 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Order } from './entities/order.entity';
 import { OrderService } from './order.service';
 import { OrderController } from './order.controller';
-import { EncounterModule } from 'src/encounter/encounter.module';
 import { OrderRepository } from './order.repository';
+import { EncounterModule } from 'src/encounter/encounter.module';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Order]), EncounterModule],
   controllers: [OrderController],
   providers: [OrderService, OrderRepository],
-  exports: [OrderService],
+  exports: [OrderService, OrderRepository],
 })
 export class OrderModule {}

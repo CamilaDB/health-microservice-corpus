@@ -22,4 +22,8 @@ export class SearchOrdersDto {
   @IsUUID()
   @IsOptional()
   patientId?: string;
+
+  @IsUUID()
+  @IsOptional()
+  encounterId?: string;
 }

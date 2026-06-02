@@ -10,6 +10,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
   imports: [TypeOrmModule.forFeature([Encounter]), PatientModule],
   controllers: [EncounterController],
   providers: [EncounterService, EncounterRepository],
-  exports: [EncounterService],
+  exports: [EncounterService, EncounterRepository],
 })
 export class EncounterModule {}
