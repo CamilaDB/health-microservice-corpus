@@ -24,6 +24,7 @@ def extract_failed_test_block(
         text=True,
         encoding="utf-8",
         errors="replace",
+        check=True
     )
 
     if result.returncode != 0:

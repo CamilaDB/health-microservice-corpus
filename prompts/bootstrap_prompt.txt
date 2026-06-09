@@ -1,7 +1,0 @@
-{{PROJECT_CONTEXT}}
-
-Source code:
-
-```ts
-{{SOURCE_CODE}}
-````

@@ -21,7 +21,11 @@ LOGS_DIR = EXPERIMENTS_DIR / "logs"
 
 TMP_DIR = EXPERIMENTS_DIR / "tmp"
 
-DATA_DIR = ROOT_DIR / "runner" / "data"
+JEST_REPORT_PATH = TMP_DIR / "coverage" / "jest-report.json"
+
+AST_CLI_OUTPUT_DIR = ROOT_DIR / "ast-cli" / "output"
+FUNCTIONS_FILE = AST_CLI_OUTPUT_DIR / "functions" / "service_functions.json"
+BOOTSTRAP_DIR = AST_CLI_OUTPUT_DIR / "bootstrap"
 
 RESULTS_CSV = METRICS_DIR / "results.csv"
 
@@ -30,16 +34,20 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 TEMPERATURE = float(os.getenv("TEMPERATURE", '0.2'))
-MAX_TOKENS = int(os.getenv("MAX_TOKENS", '2048'))
+MAX_TOKENS = int(os.getenv("MAX_TOKENS", '4096'))
 
-MAX_RUNTIME_REPAIRS = int(os.getenv("MAX_RUNTIME_REPAIRS", '2'))
+MAX_RUNTIME_REPAIRS = int(os.getenv("MAX_RUNTIME_REPAIRS", '5'))
 MAX_TS_REPAIRS = int(os.getenv("MAX_TS_REPAIRS", '3'))
 
 MODELS = {
-    "qwen": "qwen2.5-coder:3b", 
-    # "qwen": "qwen3.5:4b", 
+    "qwen": "qwen3.5:9b",
+    "gemma": "gemma4:e4b",
+    "gemini": "gemini-2.5-flash",
+    # "llama": "llama-3.3-70b-specdec",
 }
-    # "deepseek": "deepseek-coder-v2:lite",
+    # "qwen": "qwen3.5:4b",
+    # "qwen": "qwen2.5-coder:3b",
+    # "deepseek": "deepseek-coder:6.7b",
 
 PROMPT_STRATEGIES = [
     "zero_shot",

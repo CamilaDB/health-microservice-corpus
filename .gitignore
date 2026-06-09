@@ -2,3 +2,6 @@
 __pycache__
 node_modules
 coverage
+
+_old
+.venv

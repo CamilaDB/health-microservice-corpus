@@ -1,19 +1,14 @@
 import subprocess
-from dataclasses import dataclass
 from pathlib import Path
 
-from config import CORPUS_DIR, TMP_DIR
-from utils.logging import logger
+from config import CORPUS_DIR, JEST_REPORT_PATH, TMP_DIR
+from models.jest_result import JestResult
 
 
-@dataclass
-class JestResult:
-    success: bool
-    stdout: str
-    stderr: str
+def run_jest(spec_path: Path, source_file: str) -> JestResult:
+    if JEST_REPORT_PATH.exists():
+        JEST_REPORT_PATH.unlink()
 
-
-def run_jest(spec_path: Path) -> JestResult:
     relative_spec = spec_path.relative_to(CORPUS_DIR)
 
     result = subprocess.run(
@@ -22,9 +17,11 @@ def run_jest(spec_path: Path) -> JestResult:
             "npx", "jest",
             str(relative_spec),
             "--coverage",
+            f"--collectCoverageFrom={source_file}",
             "--coverageReporters=json-summary",
-            # "--json",
-            "--detectOpenHandles",
+            f"--coverageDirectory={TMP_DIR / 'coverage'}",
+            "--json",
+            f"--outputFile={JEST_REPORT_PATH}",
             "--runInBand",
             "--forceExit",
         ],
@@ -33,11 +30,12 @@ def run_jest(spec_path: Path) -> JestResult:
         text=True,
         encoding="utf-8",
         errors="replace",
+        check=False
     )
 
     return JestResult(
         success=result.returncode == 0,
         stdout=result.stdout,
         stderr=result.stderr,
+        returncode=result.returncode,
     )
-

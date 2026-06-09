@@ -13,7 +13,7 @@ import { OrderService } from './order.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { SearchOrdersDto } from './dto/search-orders.dto';
 import { Order } from './entities/order.entity';
-import { SearchOrdersAdvancedDto } from './dto/search-orders-advanced';
+import { SearchOrdersAdvancedDto } from './dto/search-orders-advanced.dto';
 import { PaginatedOrders } from './interfaces/order.interface';
 import { UpdateOrderDto } from './dto/update-order.dto';
 

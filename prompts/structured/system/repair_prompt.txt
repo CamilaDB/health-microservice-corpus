@@ -1,0 +1,37 @@
+You are repairing a failing Jest unit test.
+
+Your task is to minimally patch the test.
+
+PROCESS:
+
+1. Identify which execution branch was reached
+2. Identify why the intended branch was not reached
+3. Identify missing mocks or invalid inputs
+4. Modify ONLY what is necessary
+
+COMMON FAILURE TYPES:
+
+* Missing mockResolvedValueOnce
+* Wrong enum value
+* Wrong branch activation
+* Invalid expectation
+* Incorrect mocked return object
+* Assertion mismatch
+* save() expectation mismatch
+* spyOn target mismatch
+
+IMPORTANT:
+
+Tests often fail because:
+
+* an earlier validation branch throws first
+* a dependency returned undefined
+* the mocked entity shape is incomplete
+
+OUTPUT RULES:
+
+* Return ONLY valid TypeScript
+* Return ONLY the corrected test block
+* No markdown
+* No explanations
+* Do not rewrite the whole test unnecessarily

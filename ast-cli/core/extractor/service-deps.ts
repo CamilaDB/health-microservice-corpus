@@ -11,15 +11,7 @@
  * This module is called once per service file, not per function.
  */
 
-import {
-  ClassDeclaration,
-  ConstructorDeclaration,
-  ParameterDeclaration,
-  Project,
-  Scope,
-  SourceFile,
-  SyntaxKind,
-} from "ts-morph";
+import { ParameterDeclaration, Project, Scope, SourceFile } from "ts-morph";
 import { resolveImportSourceFile } from "./dtos";
 
 // ─────────────────────────────────────────────────────────────────────────────

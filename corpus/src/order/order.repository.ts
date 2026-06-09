@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder } from 'typeorm';
 import { Order } from './entities/order.entity';
 import { SearchOrdersDto } from './dto/search-orders.dto';
-import { SearchOrdersAdvancedDto } from './dto/search-orders-advanced';
+import { SearchOrdersAdvancedDto } from './dto/search-orders-advanced.dto';
 import { OrderSortField } from './enums/order-sort-field.enum';
 import { SortDirection } from 'src/common/enums/sort-direction.enum';
 import { PaginatedOrders } from './interfaces/order.interface';
