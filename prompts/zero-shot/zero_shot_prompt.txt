@@ -1,0 +1,15 @@
+Generate Jest tests for the target function.
+
+Function:
+{{METHOD_SOURCE}}
+
+Current spec file:
+{{EXISTING_SPEC_FILE}}
+
+Available mocks:
+{{AVAILABLE_MOCKS}}
+
+Context:
+{{RELATED_DTOS}}
+
+{{RELATED_ENUMS}}

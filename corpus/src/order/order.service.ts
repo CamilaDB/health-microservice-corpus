@@ -9,12 +9,12 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { SearchOrdersDto } from './dto/search-orders.dto';
 import { OrderRepository } from './order.repository';
 import { EncounterService } from 'src/encounter/encounter.service';
-import { SearchOrdersAdvancedDto } from './dto/search-orders-advanced';
+import { SearchOrdersAdvancedDto } from './dto/search-orders-advanced.dto';
 import { EncounterStatus } from 'src/encounter/enums/encounter-status.enum';
+import { OrderStatus } from './enums/order-status.enum';
 import { ResultStatus } from 'src/result/enums/result-status.enum';
 import { PaginatedOrders } from './interfaces/order.interface';
 import { UpdateOrderDto } from './dto/update-order.dto';
-import { OrderStatus } from './enums/order-status.enum';
 
 @Injectable()
 export class OrderService {

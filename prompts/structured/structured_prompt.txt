@@ -1,0 +1,51 @@
+Example 1
+
+Function:
+async getPatient(id: string) {
+  return this.patientRepository.findOne(id);
+}
+
+Test:
+describe('getPatient', () => {
+  it('should return patient', async () => {
+    patientRepositoryMock.findOne.mockResolvedValue(patient);
+
+    const result = await service.getPatient('1');
+
+    expect(result).toBe(patient);
+  });
+});
+
+Example 2
+
+Function:
+async deletePatient(id: string) {
+  await this.patientRepository.delete(id);
+}
+
+Test:
+describe('deletePatient', () => {
+  it('should delete patient', async () => {
+    patientRepositoryMock.delete.mockResolvedValue(undefined);
+
+    await service.deletePatient('1');
+
+    expect(patientRepositoryMock.delete).toHaveBeenCalledWith('1');
+  });
+});
+
+Generate Jest tests for the target function.
+
+Function:
+{{METHOD_SOURCE}}
+
+Current spec file:
+{{EXISTING_SPEC_FILE}}
+
+Available mocks:
+{{AVAILABLE_MOCKS}}
+
+Context:
+{{RELATED_DTOS}}
+
+{{RELATED_ENUMS}}

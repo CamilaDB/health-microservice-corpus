@@ -15,6 +15,23 @@ import { DtoField, ExtractedDto, ExtractedEnum } from "./types";
 // Import resolution
 // ─────────────────────────────────────────────────────────────────────────────
 
+function extractCandidateTypes(typeText: string): string[] {
+  return typeText
+    .split(/[|&]/)
+    .map((t) => t.trim())
+    .map((t) => t.replace(/[\[\]?]/g, ""))
+    .filter(
+      (t) =>
+        t &&
+        t !== "undefined" &&
+        t !== "null" &&
+        t !== "string" &&
+        t !== "number" &&
+        t !== "boolean" &&
+        t !== "Date",
+    );
+}
+
 export function resolveImportSourceFile(
   moduleSpecifier: string,
   sf: SourceFile,
@@ -132,9 +149,8 @@ function extractClassFields(
     });
 
     // Fallback: resolve by bare type name string (union types, indirect aliases)
-    const bareType = typeText.replace(/[\[\]?]/g, "").trim();
-    if (bareType) {
-      registerEnumFromType(bareType, importedFile, project, enumMap);
+    for (const candidateType of extractCandidateTypes(typeText)) {
+      registerEnumFromType(candidateType, importedFile, project, enumMap);
     }
 
     return {
@@ -171,9 +187,8 @@ function extractInterfaceFields(
       }
     });
 
-    const bareType = typeText.replace(/[\[\]?]/g, "").trim();
-    if (bareType) {
-      registerEnumFromType(bareType, importedFile, project, enumMap);
+    for (const candidateType of extractCandidateTypes(typeText)) {
+      registerEnumFromType(candidateType, importedFile, project, enumMap);
     }
 
     return {
@@ -281,9 +296,13 @@ export function collectDtosAndEnums(
         .getProperties()
         .map((prop) => {
           const typeText = cleanType(prop.getType().getText());
-          const bareType = typeText.replace(/[\[\]?]/g, "").trim();
-          if (bareType) {
-            registerEnumFromType(bareType, importedFile!, project, enumMap);
+          for (const candidateType of extractCandidateTypes(typeText)) {
+            registerEnumFromType(
+              candidateType,
+              importedFile!,
+              project,
+              enumMap,
+            );
           }
           return {
             name: prop.getName(),

@@ -1,0 +1,172 @@
+<TASK>
+Generate Jest unit tests following the same testing strategy used in the examples.
+</TASK>
+
+<EXAMPLE>
+
+<INPUT>
+
+<METHOD_SOURCE>
+async create(dto: CreateUserDto) {
+const existing = await repository.findOne({
+email: dto.email,
+});
+
+if (existing) {
+throw new ConflictException();
+}
+
+const entity = repository.create(dto);
+
+return repository.save(entity);
+}
+</METHOD_SOURCE>
+
+</INPUT>
+
+<OUTPUT>
+
+<TEST_OUTPUT>
+describe('create', () => {
+it('should throw ConflictException when user already exists', async () => {
+repositoryMock.findOne.mockResolvedValueOnce({
+id: '1',
+email: '[test@test.com](mailto:test@test.com)',
+});
+
+```
+await expect(
+  service.create({
+    email: 'test@test.com',
+  } as CreateUserDto),
+).rejects.toThrow(ConflictException);
+
+expect(repositoryMock.create).not.toHaveBeenCalled();
+expect(repositoryMock.save).not.toHaveBeenCalled();
+```
+
+});
+
+it('should save created entity', async () => {
+repositoryMock.findOne.mockResolvedValueOnce(null);
+
+```
+const createdEntity = {
+  email: 'test@test.com',
+};
+
+repositoryMock.create.mockReturnValueOnce(createdEntity);
+
+repositoryMock.save.mockResolvedValueOnce({
+  id: '1',
+  ...createdEntity,
+});
+
+await service.create({
+  email: 'test@test.com',
+} as CreateUserDto);
+
+expect(repositoryMock.create).toHaveBeenCalledWith({
+  email: 'test@test.com',
+});
+
+expect(repositoryMock.save).toHaveBeenCalledWith(createdEntity);
+```
+
+});
+});
+</TEST_OUTPUT>
+
+</OUTPUT>
+
+</EXAMPLE>
+
+<EXAMPLE>
+
+<INPUT>
+
+<METHOD_SOURCE>
+async validate(id: string) {
+const user = await repository.findById(id);
+
+if (!user) {
+throw new NotFoundException();
+}
+
+if (!user.active) {
+throw new BadRequestException();
+}
+
+return user;
+}
+</METHOD_SOURCE>
+
+</INPUT>
+
+<OUTPUT>
+
+<TEST_OUTPUT>
+describe('validate', () => {
+it('should throw BadRequestException when user is inactive', async () => {
+repositoryMock.findById.mockResolvedValueOnce({
+id: '1',
+active: false,
+});
+
+```
+await expect(
+  service.validate('1'),
+).rejects.toThrow(BadRequestException);
+```
+
+});
+});
+</TEST_OUTPUT>
+
+</OUTPUT>
+
+</EXAMPLE>
+
+<TARGET>
+
+<FUNCTION_NAME>
+{{FUNCTION_NAME}}
+</FUNCTION_NAME>
+
+<METHOD_SIGNATURE>
+{{METHOD_SIGNATURE}}
+</METHOD_SIGNATURE>
+
+<METHOD_SOURCE>
+{{METHOD_SOURCE}}
+</METHOD_SOURCE>
+
+<DEPENDENCIES>
+{{CONSTRUCTOR_DEPENDENCIES}}
+</DEPENDENCIES>
+
+<BRANCHES>
+{{BRANCHES}}
+</BRANCHES>
+
+<DEPENDENCY_USAGES>
+{{DEPENDENCY_USAGES}}
+</DEPENDENCY_USAGES>
+
+<RELATED_DTOS>
+{{RELATED_DTOS}}
+</RELATED_DTOS>
+
+<CURRENT_SPEC_FILE>
+{{EXISTING_SPEC_FILE}}
+</CURRENT_SPEC_FILE>
+
+</TARGET>
+
+<OUTPUT_FORMAT>
+<TEST_OUTPUT>
+describe('{{FUNCTION_NAME}}', () => {
+it(...)
+})
+</TEST_OUTPUT>
+</OUTPUT_FORMAT>

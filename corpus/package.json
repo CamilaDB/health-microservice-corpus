@@ -71,21 +71,21 @@
       "json",
       "ts"
     ],
-    "rootDir": "src",
+    "rootDir": ".",
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
     "collectCoverageFrom": [
-      "**/src/*.ts",
-      "!**/main.ts",
-      "!**/*.module.ts",
-      "!**/*.dto.ts",
-      "!**/*.entity.ts",
-      "!**/*.enum.ts",
-      "!**/*.interface.ts"
+      "src/**/*.service.ts"
     ],
     "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "moduleNameMapper": {
+      "^src/(.*)$": "<rootDir>/src/$1"
+    },
+    "setupFiles": [
+      "reflect-metadata"
+    ]
   }
 }

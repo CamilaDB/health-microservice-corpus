@@ -362,7 +362,7 @@ function generateMockInit(deps: ServiceDep[]): string {
             : dep.typeName;
         return [
           `    // TODO: add mock methods for ${dep.typeName} (could not resolve via AST)`,
-          `    ${dep.mockVar} = {} as jest.Mocked<${type}>;`,
+          `    ${dep.mockVar} = {} as unknown as jest.Mocked<${type}>;`,
         ].join("\n");
       }
 
@@ -391,7 +391,7 @@ function generateMockInit(deps: ServiceDep[]): string {
       return [
         `    ${dep.mockVar} = {`,
         methodLines.join("\n"),
-        `    } as jest.Mocked<${type}>;`,
+        `    } as unknown as jest.Mocked<${type}>;`,
       ].join("\n");
     })
     .join("\n\n");
