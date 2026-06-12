@@ -24,7 +24,7 @@ def extract_failed_test_block(
         text=True,
         encoding="utf-8",
         errors="replace",
-        check=True
+        check=False
     )
 
     if result.returncode != 0:
@@ -35,6 +35,8 @@ Failed to extract test block
 
 TEST:
 {test_name}
+
+STDOUT: {result.stdout}
 
 STDERR:
 {result.stderr}

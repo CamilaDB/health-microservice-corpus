@@ -41,6 +41,7 @@ def patch_test_block(
             text=True,
             encoding="utf-8",
             errors="replace",
+            check=False,
         )
 
         if result.returncode != 0:

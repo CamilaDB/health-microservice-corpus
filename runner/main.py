@@ -2,6 +2,9 @@ from collections import defaultdict
 from pathlib import Path
 
 from clients.ollama_client import OllamaClient
+from clients.groq_client import GroqClient
+from clients.openrouter_client import OpenRouterClient
+
 from config import (
     BOOTSTRAP_DIR,
     MAX_RUNTIME_REPAIRS,
@@ -193,7 +196,7 @@ def run_runtime_repair_loop(
                     method_metadata=method_metadata,
                 )
 
-                logger.info(f"attempt={attempt} strategy={repair_count}")
+                logger.info(f"attempt={attempt} repair_count={repair_count}")
 
         finally:
             logger.info(f"Removing temp spec {temp_spec_path}")
@@ -238,21 +241,24 @@ def run_experiment() -> None:
     functions = load_functions()
     grouped_functions = group_functions_by_spec(functions)
 
-    for model_key, model_name in MODELS.items():
-        logger.info(f"model_name={model_name}")
+    for model_key, config in MODELS.items():
+        provider = config["provider"]
+        model_name = config["model"]
 
-        if "gemini" in model_name.lower() or "gemini" in model_key.lower():
-            from clients.gemini_client import GeminiClient
-            client = GeminiClient(model_name)
-        elif (
-            "llama" in model_name.lower()
-            or "llama" in model_key.lower()
-            or "groq" in model_name.lower()
-        ):
-            from clients.groq_client import GroqClient
+        # if provider == "gemini":
+        #     client = GeminiClient(model_name)
+
+        if provider == "groq":
             client = GroqClient(model_name)
-        else:
+        
+        elif provider == "openrouter":
+            client = OpenRouterClient(model_name)
+
+        elif provider == "ollama":
             client = OllamaClient(model_name)
+
+        else:
+            raise ValueError(f"Unknown provider: {provider}")
 
 
         for strategy in PROMPT_STRATEGIES:

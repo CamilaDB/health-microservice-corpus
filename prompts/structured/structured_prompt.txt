@@ -1,75 +1,21 @@
-<TASK>
-Generate a Jest unit test for the specified execution path.
-</TASK>
+Generate Jest tests for the target function.
 
-<FUNCTION_NAME>
-{{FUNCTION_NAME}}
-</FUNCTION_NAME>
-
-<METHOD_SIGNATURE>
-{{METHOD_SIGNATURE}}
-</METHOD_SIGNATURE>
-
-<METHOD_SOURCE>
+Function:
 {{METHOD_SOURCE}}
-</METHOD_SOURCE>
 
-<TARGET_BRANCH>
-{{TARGET_BRANCH}}
-</TARGET_BRANCH>
-
-<REQUIRED_PRECONDITIONS>
-{{PRECONDITIONS}}
-</REQUIRED_PRECONDITIONS>
-
-<REQUIRED_MOCKS>
-{{REQUIRED_MOCKS}}
-</REQUIRED_MOCKS>
-
-<EXPECTED_INTERACTIONS>
-{{EXPECTED_INTERACTIONS}}
-</EXPECTED_INTERACTIONS>
-
-<EXPECTED_RESULT>
-{{EXPECTED_RESULT}}
-</EXPECTED_RESULT>
-
-<EXPECTED_EXCEPTION>
-{{EXPECTED_EXCEPTION}}
-</EXPECTED_EXCEPTION>
-
-<RELATED_DTOS>
-{{RELATED_DTOS}}
-</RELATED_DTOS>
-
-<CURRENT_SPEC_FILE>
+Existing test file:
 {{EXISTING_SPEC_FILE}}
-</CURRENT_SPEC_FILE>
 
-<GENERATION_REQUIREMENTS>
+Available mocks:
+{{AVAILABLE_MOCKS}}
 
-* Generate only one focused test
-* Mock only dependencies required for the execution path
-* Ensure all previous guards pass before reaching the target branch
-* Generate runtime-safe mocks
-* Avoid duplicating existing scenarios
-  </GENERATION_REQUIREMENTS>
+Related DTOs:
+{{RELATED_DTOS}}
 
-<OUTPUT_TEMPLATE>
+Related enums:
+{{RELATED_ENUMS}}
 
-<TEST_OUTPUT>
-describe('{{FUNCTION_NAME}}', () => {
-it('{{TEST_NAME}}', async () => {
-// arrange
+Requirements:
+{{RULES}}
 
-```
-// act
-
-// assert
-```
-
-});
-});
-</TEST_OUTPUT>
-
-</OUTPUT_TEMPLATE>
+Return only executable TypeScript.

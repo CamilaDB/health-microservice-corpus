@@ -1,0 +1,29 @@
+Task:
+Fix the failing Jest test.
+
+Error:
+{{ERROR}}
+
+Broken test:
+{{BROKEN_TEST}}
+
+Source function:
+{{SOURCE_FUNCTION}}
+
+Context:
+{{RELATED_DTOS}}
+
+{{RELATED_ENUMS}}
+
+Requirements:
+- Modify only what is necessary.
+- Preserve existing assertions whenever possible.
+- Do not add explanations.
+- Do not use markdown.
+- Do not add imports.
+- Do not add describe blocks.
+
+Output:
+- Complete replacement for BROKEN_TEST.
+- Must start with it(
+- Must end with });

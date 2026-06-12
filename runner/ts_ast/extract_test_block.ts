@@ -5,12 +5,7 @@ const payload = JSON.parse(process.argv[2]);
 const filePath = payload.file_path;
 const fullTestName = payload.test_name;
 
-const targetTestName = fullTestName
-  .split("›")
-  .map((part: string) => part.trim())
-  .pop();
-
-if (!targetTestName) {
+if (!fullTestName) {
   console.error("Invalid test name");
   process.exit(1);
 }
@@ -47,7 +42,7 @@ for (const call of calls) {
     .replace(/^['"`]/, "")
     .replace(/['"`]$/, "");
 
-  if (name !== targetTestName) {
+  if (name !== fullTestName) {
     continue;
   }
 
@@ -56,6 +51,6 @@ for (const call of calls) {
   process.exit(0);
 }
 
-console.error(`Test block not found: ${targetTestName}`);
+console.error(`Test block not found: ${fullTestName}`);
 
 process.exit(1);

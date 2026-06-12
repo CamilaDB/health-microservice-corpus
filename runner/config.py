@@ -32,6 +32,7 @@ RESULTS_CSV = METRICS_DIR / "results.csv"
 OLLAMA_URL = os.getenv("OLLAMA_URL")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
 TEMPERATURE = float(os.getenv("TEMPERATURE", '0.2'))
 MAX_TOKENS = int(os.getenv("MAX_TOKENS", '4096'))
@@ -40,17 +41,35 @@ MAX_RUNTIME_REPAIRS = int(os.getenv("MAX_RUNTIME_REPAIRS", '5'))
 MAX_TS_REPAIRS = int(os.getenv("MAX_TS_REPAIRS", '3'))
 
 MODELS = {
-    "qwen": "qwen3.5:9b",
-    "gemma": "gemma4:e4b",
-    "gemini": "gemini-2.5-flash",
-    # "llama": "llama-3.3-70b-specdec",
+    # "gemma_e4b": {
+    #     "provider": "ollama",
+    #     "model": "gemma4:e4b",
+    # },
+
+    # "qwen_coder_3b": {
+    #     "provider": "ollama",
+    #     "model": "qwen2.5-coder:3b",
+    # },
+
+    "qwen_coder_7b": {
+        "provider": "ollama",
+        "model": "qwen2.5-coder:7b",
+    },
+
+    # "llama70b": {
+    #     "provider": "groq",
+    #     "model": "llama-3.3-70b-versatile",
+    # },
+
+
+    # "gpt_oss_120b": {
+    #     "provider": "openrouter",
+    #     "model": "openai/gpt-oss-120b:free",
+    # },
 }
-    # "qwen": "qwen3.5:4b",
-    # "qwen": "qwen2.5-coder:3b",
-    # "deepseek": "deepseek-coder:6.7b",
 
 PROMPT_STRATEGIES = [
-    "zero_shot",
+    # "zero_shot",
     # "few_shot",
-    # "structured",
+    "structured",
 ]

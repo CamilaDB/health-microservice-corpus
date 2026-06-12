@@ -7,12 +7,7 @@ const filePath = payload.file_path;
 const fullTestName = payload.test_name;
 const tempPath = payload.temp_path;
 
-const targetTestName = fullTestName
-  .split("›")
-  .map((part: string) => part.trim())
-  .pop();
-
-if (!targetTestName) {
+if (!fullTestName) {
   throw new Error("Invalid test name");
 }
 
@@ -52,7 +47,7 @@ for (const call of calls) {
     .replace(/^['"`]/, "")
     .replace(/['"`]$/, "");
 
-  if (name !== targetTestName) {
+  if (name !== fullTestName) {
     continue;
   }
 
@@ -64,7 +59,7 @@ for (const call of calls) {
 }
 
 if (!replaced) {
-  throw new Error(`Test block not found: ${targetTestName}`);
+  throw new Error(`Test block not found: ${fullTestName}`);
 }
 
 sourceFile.saveSync();

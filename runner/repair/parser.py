@@ -47,8 +47,7 @@ def categorize_jest_error(error: str) -> str:
 # ─────────────────────────────────────────────────────────────────────────────
 
 _NODE_MODULES_RE = re.compile(r"\n\s+at .+node_modules.+")
-_INTERNAL_STACK_RE = re.compile(r"\n\s+at (?:Object\.<anonymous>|new Promise|Promise).+")
-
+_INTERNAL_STACK_RE = re.compile(r"\n\s+at .+")
 
 def _strip_stack_trace(message: str) -> str:
     # message = _NODE_MODULES_RE.sub("", message)
@@ -91,20 +90,21 @@ def _normalize_runtime_error(message: str) -> str:
     return m.group(0).strip() if m else message.splitlines()[0]
 
 def normalize_jest_error(message: str, error_type: str) -> str:
-    if error_type == "mock_call_argument_mismatch":
-        return _normalize_called_with(message)
+    message = _strip_stack_trace(message)
+    # if error_type == "mock_call_argument_mismatch":
+    #     return _normalize_called_with(message)
 
-    if error_type == "undefined_property":
-        return _normalize_undefined(message)
+    # if error_type == "undefined_property":
+    #     return _normalize_undefined(message)
 
-    if error_type in {
-        "undefined_identifier",
-        "not_a_function",
-        "typescript_error",
-    }:
-        return _normalize_runtime_error(message)
+    # if error_type in {
+    #     "undefined_identifier",
+    #     "not_a_function",
+    #     "typescript_error",
+    # }:
+    #     return _normalize_runtime_error(message)
 
-    return _strip_stack_trace(message)[:1200]
+    return message[:1200]
 
 
 # ─────────────────────────────────────────────────────────────────────────────

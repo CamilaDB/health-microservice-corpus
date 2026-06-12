@@ -109,6 +109,9 @@ def _skip_test_block(
         return False
 
 
+def normalize_block(block: str) -> str:
+    return "".join(block.split())
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Per-block LLM repair
 # ─────────────────────────────────────────────────────────────────────────────
@@ -152,10 +155,16 @@ def _repair_block(
         repaired_block = normalize_content(response.content)
         logger.debug(f"repaired_block={repaired_block}")
 
-        if not validate_repaired_test_block(repaired_block):
-            logger.warning(
-                f"Invalid repair generated for '{failure.test_name}'"
+        if normalize_block(repaired_block) == normalize_block(broken_block):
+            logger.warning(f"Repair produced identical block for '{failure.test_name}'")
+            _skip_test_block(
+                generated_spec_path=generated_spec_path,
+                test_name=failure.test_name,
             )
+            return True
+
+        if not validate_repaired_test_block(repaired_block):
+            logger.warning(f"Invalid repair generated for '{failure.test_name}'")
             return False
 
         patch_test_block(
@@ -213,6 +222,7 @@ def repair_runtime_failure(
         )
 
     repaired_count = 0
+    repaired_any = False
 
     for failure in failures:
 
@@ -220,8 +230,6 @@ def repair_runtime_failure(
             f"{failure.test_name}"
             f"::{failure.error_type}"
         )
-
-        logger.debug(f"repair_runtime_failure failure_counts: {repair_runtime_failure._failure_counts}")
 
         repair_runtime_failure._failure_counts[
             error_key
