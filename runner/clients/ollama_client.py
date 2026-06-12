@@ -23,7 +23,7 @@ class OllamaClient(BaseClient):
                 "prompt": prompt,
                 "system": system_prompt,
                 "stream": False,
-                "think": True,
+                # "think": True,
                 "keep_alive": "30m",
                 "options": {
                     "temperature": float(TEMPERATURE),

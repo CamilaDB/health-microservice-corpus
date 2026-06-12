@@ -1,25 +1,15 @@
-<TASK>
 Generate Jest tests for the target function.
-</TASK>
 
-<TARGET_FUNCTION>
+Function:
 {{METHOD_SOURCE}}
-</TARGET_FUNCTION>
 
-<CURRENT_SPEC_FILE>
+Current spec file:
 {{EXISTING_SPEC_FILE}}
-</CURRENT_SPEC_FILE>
 
-<AVAILABLE_MOCKS>
+Available mocks:
 {{AVAILABLE_MOCKS}}
-</AVAILABLE_MOCKS>
 
-<CONTEXT>
+Context:
 {{RELATED_DTOS}}
 
 {{RELATED_ENUMS}}
-</CONTEXT>
-
-<RULES>
-{{RULES}}
-</RULES>

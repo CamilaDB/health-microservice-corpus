@@ -194,9 +194,9 @@ def build_prompt(
 
     is_async = ctx.isAsync
     if is_async is True:
-        rules = "- Use: await expect(service.METHOD()).rejects.toThrow(ExceptionClass)"
+        rules = f"- Use: await expect(service.{ctx.functionName}()).rejects.toThrow(ExceptionClass)"
     elif is_async is False:
-        rules = "- Use: expect(() => service.METHOD()).toThrow(ExceptionClass)"
+        rules = f"- Use: expect(() => service.{ctx.functionName}()).toThrow(ExceptionClass)"
     else:
         rules = (
             "- Sync functions: expect(() => service.METHOD()).toThrow(ExceptionClass)\n"
