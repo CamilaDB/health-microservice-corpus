@@ -1,51 +1,102 @@
-Example 1
+<ROLE>
+Senior NestJS and Jest unit test engineer.
+Generate exhaustive tests covering all branches of the target function.
+</ROLE>
 
-Function:
-async getPatient(id: string) {
-  return this.patientRepository.findOne(id);
-}
+<TASK>
+Generate Jest unit tests for the function identified in FUNCTION_NAME.
+Cover every branch listed in BRANCHES.
+Use only the mocks declared in AVAILABLE_MOCKS.
+</TASK>
 
-Test:
-describe('getPatient', () => {
-  it('should return patient', async () => {
-    patientRepositoryMock.findOne.mockResolvedValue(patient);
+<FUNCTION_NAME>
+{{FUNCTION_NAME}}
+</FUNCTION_NAME>
 
-    const result = await service.getPatient('1');
+<METHOD_SIGNATURE>
+The full TypeScript signature of the function under test.
+{{METHOD_SIGNATURE}}
+</METHOD_SIGNATURE>
 
-    expect(result).toBe(patient);
-  });
-});
-
-Example 2
-
-Function:
-async deletePatient(id: string) {
-  await this.patientRepository.delete(id);
-}
-
-Test:
-describe('deletePatient', () => {
-  it('should delete patient', async () => {
-    patientRepositoryMock.delete.mockResolvedValue(undefined);
-
-    await service.deletePatient('1');
-
-    expect(patientRepositoryMock.delete).toHaveBeenCalledWith('1');
-  });
-});
-
-Generate Jest tests for the target function.
-
-Function:
+<METHOD_SOURCE>
+The complete source code of the function under test.
 {{METHOD_SOURCE}}
+</METHOD_SOURCE>
 
-Current spec file:
-{{EXISTING_SPEC_FILE}}
+<CONSTRUCTOR_DEPENDENCIES>
+The injectable dependencies available to the service.
+Each entry is: - <name>: <Type>
+Use this to identify which mock variable corresponds to each dependency.
+{{CONSTRUCTOR_DEPENDENCIES}}
+</CONSTRUCTOR_DEPENDENCIES>
 
-Available mocks:
+<BRANCHES>
+Each logical branch that must be covered by a dedicated test.
+Format per branch:
+  Condition: <guard expression>
+  Called methods: <dependency methods called in this path>
+  Throws: <exception class or none>
+  Returns: <return value or none>
+{{BRANCHES}}
+</BRANCHES>
+
+<DEPENDENCY_CALLS>
+All dependency method calls made by this function.
+Format per call:
+  Method: <this.dependency.method>
+  Kind: <method | property>
+  Async: <true | false>
+  Return used: <true | false>
+  Assigned to: <variable name or none>
+Use Async=true → mockResolvedValueOnce; Async=false → mockReturnValueOnce.
+{{DEPENDENCY_CALLS}}
+</DEPENDENCY_CALLS>
+
+<AVAILABLE_MOCKS>
+The exact mock variable names declared in beforeEach, mapped to their callable methods.
+ALWAYS use these exact variable names — never invent mock names.
+Format:
+  <mockVariable>:
+    - <method> (async | sync)
 {{AVAILABLE_MOCKS}}
+</AVAILABLE_MOCKS>
 
-Context:
+<RELATED_DTOS>
+TypeScript DTO shapes used as input or output types.
 {{RELATED_DTOS}}
+</RELATED_DTOS>
 
+<RELATED_ENUMS>
+TypeScript enum values available for use in mocks and assertions.
 {{RELATED_ENUMS}}
+</RELATED_ENUMS>
+
+<CURRENT_SPEC_FILE>
+The spec file as it exists so far. New describe block will be appended after it.
+Do NOT redeclare anything already declared here.
+{{EXISTING_SPEC_FILE}}
+</CURRENT_SPEC_FILE>
+
+<CONSTRAINTS>
+* Generate exactly one describe('{{FUNCTION_NAME}}') block
+* Generate one it() per branch listed in BRANCHES
+* Earlier guard branches MUST be satisfied before testing deeper branches
+* Use mockResolvedValueOnce for async calls, mockReturnValueOnce for sync calls
+* Async exception: await expect(service.{{FUNCTION_NAME}}(...)).rejects.toThrow(ExceptionClass)
+* Sync exception: expect(() => service.{{FUNCTION_NAME}}(...)).toThrow(ExceptionClass)
+* NEVER import anything
+* NEVER redeclare mocks or service
+* NEVER generate TestingModule or beforeEach
+</CONSTRAINTS>
+
+<OUTPUT_SCHEMA>
+Return ONLY executable TypeScript matching this exact structure:
+
+describe('{{FUNCTION_NAME}}', () => {
+  it('should <expected behavior>', [async] () => {
+    // arrange: mock dependencies
+    // act: call the service method
+    // assert: verify result or thrown exception
+  });
+});
+</OUTPUT_SCHEMA>

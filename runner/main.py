@@ -241,6 +241,10 @@ def run_experiment() -> None:
     functions = load_functions()
     grouped_functions = group_functions_by_spec(functions)
 
+    incremental_system_prompt = load_system_prompt("incremental")
+    typescript_repair_system_prompt = load_system_prompt("full_spec_repair")
+    runtime_repair_system_prompt = load_system_prompt("repair")
+
     for model_key, config in MODELS.items():
         provider = config["provider"]
         model_name = config["model"]
@@ -260,13 +264,9 @@ def run_experiment() -> None:
         else:
             raise ValueError(f"Unknown provider: {provider}")
 
-
         for strategy in PROMPT_STRATEGIES:
             logger.info(f"Running model={model_key} strategy={strategy}")
 
-            incremental_system_prompt = load_system_prompt("incremental", strategy)
-            typescript_repair_system_prompt = load_system_prompt("full_spec_repair", strategy)
-            runtime_repair_system_prompt = load_system_prompt("repair", strategy)
             runtime_repair_prompt = load_prompt_template("repair", strategy)
 
             for test_output_file, file_functions in grouped_functions.items():

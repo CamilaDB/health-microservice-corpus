@@ -24,12 +24,8 @@ def _resolve_prompt_path(strategy: str, relative_path: Path | str) -> Path:
     return candidate
 
 
-def load_system_prompt(type: str, strategy: str | None = None) -> str:
-    selected_strategy = strategy or DEFAULT_STRATEGY
-    system_prompt_path = _resolve_prompt_path(
-        selected_strategy,
-        Path("system") / f"{type}_prompt.txt",
-    )
+def load_system_prompt(type: str,) -> str:
+    system_prompt_path = PROMPTS_DIR / "system" / f"{type}_prompt.txt"
     return read_file(system_prompt_path)
 
 

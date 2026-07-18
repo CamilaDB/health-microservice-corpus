@@ -1,0 +1,50 @@
+<TASK>
+Fix the BROKEN_TEST using the same repair strategy shown in the example below.
+</TASK>
+
+<REPAIR_EXAMPLE>
+
+<INPUT>
+<ERROR_MESSAGE>
+Expected: BadRequestException
+Received: function did not throw
+</ERROR_MESSAGE>
+
+<BROKEN_TEST>
+it('should throw BadRequestException when balance is insufficient', async () => {
+  accountMock.findById.mockResolvedValueOnce({ id: '1', balance: 100 });
+
+  await expect(service.withdraw('1', 200)).rejects.toThrow(BadRequestException);
+});
+</BROKEN_TEST>
+</INPUT>
+
+<OUTPUT>
+<REPAIRED_TEST>
+it('should throw BadRequestException when balance is insufficient', async () => {
+  accountMock.findById.mockResolvedValueOnce({ id: '1', balance: 50 });
+
+  await expect(service.withdraw('1', 200)).rejects.toThrow(BadRequestException);
+});
+</REPAIRED_TEST>
+</OUTPUT>
+
+</REPAIR_EXAMPLE>
+
+<ERROR>
+{{ERROR}}
+</ERROR>
+
+<BROKEN_TEST>
+{{BROKEN_TEST}}
+</BROKEN_TEST>
+
+<SOURCE_FUNCTION>
+{{SOURCE_FUNCTION}}
+</SOURCE_FUNCTION>
+
+<CONTEXT>
+{{RELATED_DTOS}}
+
+{{RELATED_ENUMS}}
+</CONTEXT>

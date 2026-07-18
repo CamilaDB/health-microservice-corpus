@@ -207,14 +207,14 @@ def build_prompt(
         # rules += "\n- Generate at most 10 it() blocks. Prioritize error paths first, then happy path."
 
     replacements = {
-        # "{{FUNCTION_NAME}}":
-        #     function_data.name,
+        "{{FUNCTION_NAME}}":
+            function_data.name,
 
         # "{{IS_ASYNC}}":
         #     "true" if ctx.isAsync else "false",
 
-        # "{{METHOD_SIGNATURE}}":
-        #     ctx.methodSignature,
+        "{{METHOD_SIGNATURE}}":
+            ctx.methodSignature,
 
         "{{METHOD_SOURCE}}":
             ctx.methodSource,
@@ -228,20 +228,20 @@ def build_prompt(
         # "{{BUSINESS_RULES}}":
         #     _fmt_list(ctx.businessRules),
 
-        # "{{BRANCHES}}":
-        #     _fmt_branches(ctx.branches),
+        "{{BRANCHES}}":
+            _fmt_branches(ctx.branches),
 
         # "{{DEPENDENCY_USAGES}}":
         #     _fmt_dependency_usages(ctx.dependencyUsages),
 
-        # "{{DEPENDENCY_CALLS}}":
-        #     _fmt_dependency_calls(ctx.dependencyCalls),
+        "{{DEPENDENCY_CALLS}}":
+            _fmt_dependency_calls(ctx.dependencyCalls),
 
         # "{{TRANSFORMATIONS}}":
         #     _fmt_transformations(ctx.transformations),
 
-        # "{{CONSTRUCTOR_DEPENDENCIES}}":
-        #     _fmt_constructor_deps(ctx.constructorDependencies),
+        "{{CONSTRUCTOR_DEPENDENCIES}}":
+            _fmt_constructor_deps(ctx.constructorDependencies),
 
         "{{AVAILABLE_MOCKS}}":
             available_mocks,

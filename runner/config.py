@@ -35,7 +35,7 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
 TEMPERATURE = float(os.getenv("TEMPERATURE", '0.2'))
-MAX_TOKENS = int(os.getenv("MAX_TOKENS", '4096'))
+MAX_TOKENS = int(os.getenv("MAX_TOKENS", '8192'))
 
 MAX_RUNTIME_REPAIRS = int(os.getenv("MAX_RUNTIME_REPAIRS", '5'))
 MAX_TS_REPAIRS = int(os.getenv("MAX_TS_REPAIRS", '3'))
@@ -46,15 +46,15 @@ MODELS = {
     #     "model": "gemma4:e4b",
     # },
 
-    # "qwen_coder_3b": {
-    #     "provider": "ollama",
-    #     "model": "qwen2.5-coder:3b",
-    # },
-
-    "qwen_coder_7b": {
+    "qwen_coder_3b": {
         "provider": "ollama",
-        "model": "qwen2.5-coder:7b",
+        "model": "qwen2.5-coder:3b",
     },
+
+    # "qwen_coder_7b": {
+    #     "provider": "ollama",
+    #     "model": "qwen2.5-coder:7b",
+    # },
 
     # "llama70b": {
     #     "provider": "groq",
@@ -69,7 +69,7 @@ MODELS = {
 }
 
 PROMPT_STRATEGIES = [
-    # "zero_shot",
-    # "few_shot",
+    "zero_shot",
+    "few_shot",
     "structured",
 ]

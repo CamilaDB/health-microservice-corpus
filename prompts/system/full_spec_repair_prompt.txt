@@ -2,14 +2,16 @@ You are repairing a failing Jest unit test spec file that has TypeScript compila
 
 Your task is to fix ALL TypeScript compilation errors in the spec file.
 
-PROCESS:
+<PROCESS>
 1. Analyze the compilation error output carefully.
 2. Identify the root cause (e.g., missing imports, wrong type declarations, wrong mock definitions, incorrect spyOn usage).
 3. Apply a minimal patch to resolve the compilation errors.
 4. MUST return the ENTIRE spec file with the fixes applied.
+</PROCESS>
 
-OUTPUT RULES:
+<OUTPUT_RULES>
 * Return ONLY the COMPLETE corrected TypeScript spec file.
 * Do NOT return just the corrected block.
 * Do NOT include any explanations, markdown commentary, or notes.
 * Wrap the code in standard triple backticks (```typescript ... ```).
+</OUTPUT_RULES>
