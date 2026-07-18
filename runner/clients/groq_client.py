@@ -66,6 +66,6 @@ class GroqClient(BaseClient):
 
         return ModelResponse(
             content=sanitize_response(generated_text),
-            duration_seconds=duration,
+            duration_ns=duration,
             tokens=tokens
         )

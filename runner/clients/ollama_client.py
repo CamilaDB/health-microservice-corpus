@@ -62,6 +62,6 @@ class OllamaClient(BaseClient):
 
         return ModelResponse(
             content=sanitize_response(data["response"]),
-            duration_seconds=total_duration,
+            duration_ns=total_duration,
             tokens=tokens,
         )

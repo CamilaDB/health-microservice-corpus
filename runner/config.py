@@ -28,6 +28,10 @@ FUNCTIONS_FILE = AST_CLI_OUTPUT_DIR / "functions" / "service_functions.json"
 BOOTSTRAP_DIR = AST_CLI_OUTPUT_DIR / "bootstrap"
 
 RESULTS_CSV = METRICS_DIR / "results.csv"
+SERVICE_RESULTS_CSV = METRICS_DIR / "service_results.csv"
+GLOBAL_RESULTS_CSV = METRICS_DIR / "metrics_results.csv"
+MUTATION_RESULTS_CSV = METRICS_DIR / "mutation_results.csv"
+SMELL_RESULTS_CSV    = METRICS_DIR / "smell_results.csv"
 
 OLLAMA_URL = os.getenv("OLLAMA_URL")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -42,14 +46,23 @@ MAX_TS_REPAIRS = int(os.getenv("MAX_TS_REPAIRS", '3'))
 
 MODELS = {
     # "gemma_e4b": {
-    #     "provider": "ollama",
+    #     "provider": "ollama", DEU RUIM
     #     "model": "gemma4:e4b",
     # },
+    # "ornith_9b": { #TALVEZ - QUEBROU NO MEIO... MUITO LENTO
+    #     "provider": "ollama",
+    #     "model": "ornith:9b",
+    # },
 
-    "qwen_coder_3b": {
+    "gemma_4": {
         "provider": "ollama",
-        "model": "qwen2.5-coder:3b",
+        "model": "gemma4:e2b",
     },
+
+    # "qwen_coder_3b": {
+    #     "provider": "ollama",
+    #     "model": "qwen2.5-coder:3b",
+    # },
 
     # "qwen_coder_7b": {
     #     "provider": "ollama",

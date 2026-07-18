@@ -11,6 +11,27 @@ from utils.logging import logger
 
 APPEND_MARKER = "// TESTS_APPEND_HERE"
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Function ID — deterministic describe wrapper name
+# ─────────────────────────────────────────────────────────────────────────────
+
+def make_fn_id(function_name: str) -> str:
+    """
+    Generates a deterministic, collision-free identifier for a function's
+    outer describe wrapper.
+
+    Format: FN_{function_name}_END
+
+    The _END suffix prevents substring ambiguity when used as a Jest
+    --testNamePattern: "FN_searchOrders_END" does not match
+    "FN_searchOrdersAdvanced_END", unlike a bare "FN_searchOrders".
+    The same token is used as the describe() title for AST-based
+    repair/skip scoping.
+    """
+    return f"FN_{function_name}_END"
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Spec file creation
 # ─────────────────────────────────────────────────────────────────────────────
@@ -20,7 +41,7 @@ def create_spec_file(
     strategy: str,
     test_output_file: str,
     content: str,
-) -> tuple[Path, Path]:
+) -> Path:
     normalized = normalize_content(content)
 
     generated_path = GENERATED_DIR / strategy / model / test_output_file
@@ -38,23 +59,59 @@ def append_test_block(
     *,
     spec_file: Path,
     content: str,
+    fn_id: str,
 ) -> None:
+    """
+    Appends the generated test block wrapped in a deterministic outer
+    describe(fn_id, ...) so that:
+
+      1. Jest --testNamePattern=<fn_id> isolates execution to this function.
+      2. extract_failed_test_block / patch_test_block can scope AST searches
+         to this describe, avoiding collisions when different functions
+         generate it() blocks with identical titles.
+
+    The resulting spec structure for a service with two functions:
+
+        describe('PatientService', () => {          ← bootstrap root
+          // ... shared setup ...
+
+          describe('FN_getPatientById_END', () => { ← our wrapper (fn_id)
+            describe('getPatientById', () => {      ← LLM's describe
+              it('should return a patient', ...)
+            });
+          });
+
+          describe('FN_listPatients_END', () => {
+            describe('listPatients', () => {
+              it('should return all patients', ...)
+            });
+          });
+        });
+
+    NOTE: _whole_file_repair sends the complete spec to the LLM for repair.
+    The repair system prompt MUST instruct the model to preserve
+    describe('FN_..._END', ...) wrappers unchanged. Failing to do so will
+    silently break testNamePattern isolation for subsequent iterations.
+    """
     cleaned = clean_generated_block(content)
 
     if not cleaned.strip():
         logger.warning("append_test_block: empty block after cleaning, skipping")
         return
 
+    # Wrap in deterministic outer describe
+    wrapped = f"describe('{fn_id}', () => {{\n{cleaned}\n}});"
+
     current = spec_file.read_text(encoding="utf-8")
 
     if APPEND_MARKER not in current:
         logger.warning("append_test_block: marker not found, appending at end")
-        spec_file.write_text(current.rstrip() + f"\n\n{cleaned}\n", encoding="utf-8")
+        spec_file.write_text(current.rstrip() + f"\n\n{wrapped}\n", encoding="utf-8")
         return
 
     updated = current.replace(
         APPEND_MARKER,
-        f"{cleaned}\n\n  {APPEND_MARKER}",
+        f"{wrapped}\n\n  {APPEND_MARKER}",
     )
 
     spec_file.write_text(updated, encoding="utf-8")
@@ -88,29 +145,21 @@ def count_unclosed_scopes(block: str) -> tuple[int, int, int]:
     Returns:
       (unclosed_braces, unclosed_parens, unclosed_brackets)
     """
-
-    braces = 0
-    parens = 0
-    brackets = 0
-
+    braces = parens = brackets = 0
     in_string = False
     string_char = None
     escape = False
 
     for c in block:
-
         if in_string:
             if escape:
                 escape = False
                 continue
-
             if c == "\\":
                 escape = True
                 continue
-
             if c == string_char:
                 in_string = False
-
             continue
 
         if c in ("'", '"', "`"):
@@ -122,33 +171,22 @@ def count_unclosed_scopes(block: str) -> tuple[int, int, int]:
             braces += 1
         elif c == "}":
             braces -= 1
-
         elif c == "(":
             parens += 1
         elif c == ")":
             parens -= 1
-
         elif c == "[":
             brackets += 1
         elif c == "]":
             brackets -= 1
 
-    return (
-        max(0, braces),
-        max(0, parens),
-        max(0, brackets),
-    )
+    return (max(0, braces), max(0, parens), max(0, brackets))
+
 
 def _remove_last_incomplete_test(block: str) -> str:
-    """
-    Removes trailing incomplete it() blocks (those with unbalanced braces).
-    Iterates from last to first so multiple truncated tests are all stripped.
-    """
     matches = list(re.finditer(r"^\s*it\s*\(", block, re.MULTILINE))
-
     if not matches:
         return block
-
     for i in reversed(range(len(matches))):
         start = matches[i].start()
         tail = block[start:]
@@ -158,30 +196,7 @@ def _remove_last_incomplete_test(block: str) -> str:
                 f"_remove_last_incomplete_test: dropped incomplete it() at offset {start}"
             )
             return trimmed
-
     return block
-
-
-# def _repair_truncated_test_block(block: str) -> str:
-#     """
-#     Closes any unclosed describe() scopes after incomplete tests have been
-#     removed.  Uses a string-aware depth counter to avoid false positives from
-#     brace characters inside string literals.
-#     """
-#     block = block.rstrip()
-
-#     if not block or "describe(" not in block:
-#         return block
-
-#     unclosed = _count_unclosed_scopes(block)
-
-#     if unclosed > 1:
-#         logger.warning(
-#             f"_repair_truncated_test_block: closing {unclosed} unclosed scope(s)"
-#         )
-#         block += "\n" + "\n".join("});" for _ in range(unclosed))
-
-#     return block.strip()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -195,67 +210,8 @@ FORBIDDEN_BLOCK_PATTERNS: list[tuple[str, str, bool]] = [
     (r"\bafterAll\s*\(",             "afterAll in block",         True),
 ]
 
-# _TEST_OUTPUT_RE = re.compile(
-#     r"<TEST_OUTPUT>\s*(.*?)\s*</TEST_OUTPUT>",
-#     re.DOTALL,
-# )
-
-# _TEST_OUTPUT_OPEN_RE = re.compile(
-#     r"<TEST_OUTPUT>\s*(.*)",
-#     re.DOTALL,
-# )
-
-# _OUTER_SERVICE_DESCRIBE_RE = re.compile(
-#     r"^\s*describe\s*\(\s*['\"][^'\"]*Service['\"]",
-# )
-
-
-# def extract_test_output(content: str) -> str | None:
-#     """
-#     Extracts the TypeScript block from <TEST_OUTPUT>...</TEST_OUTPUT>.
-
-#     If the closing tag is missing (truncated response), attempts to repair
-#     the block by removing the last incomplete it() and closing open scopes.
-#     """
-#     if not content:
-#         return None
-
-#     # Happy path
-#     match = _TEST_OUTPUT_RE.search(content)
-#     if match:
-#         extracted = match.group(1).strip()
-#         return extracted or None
-
-#     # Truncated response — opening tag present but no closing tag
-#     open_match = _TEST_OUTPUT_OPEN_RE.search(content)
-#     if open_match:
-#         extracted = open_match.group(1).strip()
-#         if not extracted:
-#             return None
-
-#         logger.warning(
-#             "extract_test_output: response truncated — attempting repair"
-#         )
-
-#         # Step 1: remove any trailing incomplete it() block
-#         repaired = _remove_last_incomplete_test(extracted)
-
-#         # Step 2: close any unclosed describe() scopes
-#         # repaired = _repair_truncated_test_block(cleaned)
-
-#         if repaired:
-#             logger.warning(
-#                 f"extract_test_output: recovered {len(repaired)} chars after repair"
-#             )
-#             return repaired
-
-#     return None
-
 
 def validate_generated_block(block: str) -> bool:
-    """
-    Returns True if the block is valid and safe to append.
-    """
     if not block or not block.strip():
         logger.warning("validate_generated_block: empty block")
         return False
@@ -273,13 +229,10 @@ def validate_generated_block(block: str) -> bool:
         logger.warning("validate_generated_block: missing describe() block")
         return False
 
-    # Brace balance check using the same string-aware counter
     b, p, a = count_unclosed_scopes(block)
     if b or p or a:
         logger.warning(
-            f"validate_generated_block: "
-            f"unclosed scopes "
-            f"{{={b} (={p} [={a}"
+            f"validate_generated_block: unclosed scopes {{={b} (={p} [={a}"
         )
         return False
 
@@ -287,12 +240,6 @@ def validate_generated_block(block: str) -> bool:
 
 
 def clean_generated_block(content: str) -> str:
-    """
-    Cleans an incremental test block:
-    - Strips markdown fences
-    - Removes import lines that escaped validation
-    - Removes the outer describe('XxxService') wrapper when present
-    """
     content = content.strip()
     for fence in ("```typescript", "```ts", "```"):
         if content.startswith(fence):
@@ -304,7 +251,6 @@ def clean_generated_block(content: str) -> str:
 
     lines = content.splitlines()
     filtered: list[str] = []
-
     for line in lines:
         stripped = line.strip()
         if stripped.startswith("import ") and " from " in stripped:
@@ -312,9 +258,7 @@ def clean_generated_block(content: str) -> str:
             continue
         filtered.append(line)
 
-    result = "\n".join(filtered).strip()
-
-    return result
+    return "\n".join(filtered).strip()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -364,108 +308,46 @@ def ensure_append_marker(spec_content: str) -> str:
     return spec_content.rstrip() + f"\n\n  {APPEND_MARKER}\n"
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Repaired it() block validation
+# ─────────────────────────────────────────────────────────────────────────────
 
 FORBIDDEN_IT_PATTERNS = [
-    (
-        r"^\s*import\s+",
-        "import statement",
-        True,
-    ),
-    (
-        r"^\s*describe\s*\(",
-        "nested describe block",
-        True,
-    ),
-    (
-        r"^\s*export\s+",
-        "export statement",
-        True,
-    ),
+    (r"^\s*import\s+",      "import statement",    True),
+    (r"^\s*describe\s*\(",  "nested describe block", True),
+    (r"^\s*export\s+",      "export statement",    True),
 ]
 
+
 def validate_repaired_test_block(block: str) -> bool:
-    """
-    Validates a repaired Jest it() block before patching.
-
-    Expected shape:
-
-        it('...', () => {
-            ...
-        })
-
-    Returns True if safe to patch.
-    """
-
     if not block or not block.strip():
-        logger.warning(
-            "validate_repaired_test_block: empty block"
-        )
+        logger.warning("validate_repaired_test_block: empty block")
         return False
 
     for pattern, description, discard in FORBIDDEN_IT_PATTERNS:
         if re.search(pattern, block, re.MULTILINE):
             logger.warning(
-                f"validate_repaired_test_block: "
-                f"forbidden pattern '{description}' found"
-                + (
-                    " — discarding block"
-                    if discard
-                    else " — warning only"
-                )
+                f"validate_repaired_test_block: forbidden pattern '{description}' found"
+                + (" — discarding block" if discard else " — warning only")
             )
-
             if discard:
                 return False
 
-    # must contain exactly one test block
-    it_count = len(
-        re.findall(
-            r"\bit(?:\.only|\.skip)?\s*\(",
-            block,
-        )
-    )
-
+    it_count = len(re.findall(r"\bit(?:\.only|\.skip)?\s*\(", block))
     if it_count != 1:
         logger.warning(
-            f"validate_repaired_test_block: "
-            f"expected exactly 1 it() block, got {it_count}"
+            f"validate_repaired_test_block: expected exactly 1 it() block, got {it_count}"
         )
         return False
 
-    # repaired block should not contain multiple tests
-    test_count = len(
-        re.findall(
-            r"\bit(?:\.only|\.skip)?\s*\(",
-            block,
-        )
-    )
-
-    if test_count > 1:
-        logger.warning(
-            "validate_repaired_test_block: "
-            "multiple test blocks detected"
-        )
+    if not re.search(r"^\s*it(?:\.only|\.skip)?\s*\(", block, re.MULTILINE):
+        logger.warning("validate_repaired_test_block: missing root it() block")
         return False
 
-    # ensure block starts with it(...)
-    if not re.search(
-        r"^\s*it(?:\.only|\.skip)?\s*\(",
-        block,
-        re.MULTILINE,
-    ):
-        logger.warning(
-            "validate_repaired_test_block: "
-            "missing root it() block"
-        )
-        return False
-
-    # brace / parenthesis / bracket balance
     b, p, a = count_unclosed_scopes(block)
-
     if b or p or a:
         logger.warning(
-            "validate_repaired_test_block: "
-            f"unclosed scopes {{={b} (={p} [={a}"
+            f"validate_repaired_test_block: unclosed scopes {{={b} (={p} [={a}"
         )
         return False
 

@@ -116,7 +116,7 @@ class OpenRouterClient(BaseClient):
             content=sanitize_response(generated_text),
 
             # OpenRouter não retorna total_time
-            duration_seconds=0,
+            duration_ns=0,
 
             tokens=tokens,
         )

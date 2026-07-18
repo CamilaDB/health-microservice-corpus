@@ -6,6 +6,12 @@ Prefer the JSON report over stderr because:
 - Stack traces are already in failureMessages (not mixed with test output)
 - fullName gives the exact test title without parsing chains
 - status field is unambiguous (no heuristic needed)
+
+Parse priority:
+  1. JSON report  (Jest ran to completion, produced --outputFile)
+  2. Node.js crash  (unhandled promise rejection crashed the process before
+                     Jest could write the report — detected from stderr pattern)
+  3. Jest stderr bullets  (last resort, ANSI-stripped, heuristic)
 """
 
 import re
@@ -15,6 +21,7 @@ from pathlib import Path
 from config import JEST_REPORT_PATH
 from models.jest_result import JestFailure
 from utils.logging import logger
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Error categorization
@@ -39,6 +46,8 @@ def categorize_jest_error(error: str) -> str:
         return "undefined_identifier"
     if "error ts" in error.lower():
         return "typescript_error"
+    if "unhandled" in error.lower() and "rejection" in error.lower():
+        return "unhandled_rejection"
     return "generic"
 
 
@@ -49,66 +58,20 @@ def categorize_jest_error(error: str) -> str:
 _NODE_MODULES_RE = re.compile(r"\n\s+at .+node_modules.+")
 _INTERNAL_STACK_RE = re.compile(r"\n\s+at .+")
 
+
 def _strip_stack_trace(message: str) -> str:
-    # message = _NODE_MODULES_RE.sub("", message)
     message = _INTERNAL_STACK_RE.sub("", message)
     message = re.sub(r"\n{3,}", "\n\n", message)
     return message.strip()
 
 
-def _normalize_called_with(message: str) -> str:
-    lines = message.splitlines()
-    relevant = []
-    capture = False
-    for line in lines:
-        if "Expected" in line or "Received" in line:
-            capture = True
-        if capture and "Number of calls" in line:
-            break
-        if capture:
-            relevant.append(line)
-    return "\n".join(relevant).strip() or message[:800]
-
-
-def _normalize_undefined(message: str) -> str:
-    m = re.search(
-        r"Cannot read propert(?:y|ies) of undefined \(?reading '(.+?)'\)?",
-        message,
-    )
-    prop = m.group(1) if m else "unknown"
-    loc = re.search(r"at Object\.<anonymous> \((.+?\.spec\.ts:\d+:\d+)\)", message)
-    loc_str = f" at {loc.group(1)}" if loc else ""
-    return f"Undefined object accessed property '{prop}'{loc_str}."
-
-_RUNTIME_ERROR_RE = re.compile(
-    r"^(ReferenceError|TypeError|SyntaxError|RangeError|Error):.*",
-    re.MULTILINE,
-)
-
-def _normalize_runtime_error(message: str) -> str:
-    m = _RUNTIME_ERROR_RE.search(message)
-    return m.group(0).strip() if m else message.splitlines()[0]
-
 def normalize_jest_error(message: str, error_type: str) -> str:
     message = _strip_stack_trace(message)
-    # if error_type == "mock_call_argument_mismatch":
-    #     return _normalize_called_with(message)
-
-    # if error_type == "undefined_property":
-    #     return _normalize_undefined(message)
-
-    # if error_type in {
-    #     "undefined_identifier",
-    #     "not_a_function",
-    #     "typescript_error",
-    # }:
-    #     return _normalize_runtime_error(message)
-
     return message[:1200]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# JSON report parser (primary)
+# JSON report parser  (primary path)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _parse_from_report(report_path: Path) -> list[JestFailure] | None:
@@ -149,19 +112,132 @@ def _parse_from_report(report_path: Path) -> list[JestFailure] | None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Stderr fallback parser
+# Node.js crash parser  (second path)
 # ─────────────────────────────────────────────────────────────────────────────
 
-_ANSI_RE = re.compile(r"\x1B\[[0-?]*[ -/]*[@-~]")
+# Matches the Node.js process crash pattern produced by an unhandled promise
+# rejection or uncaught exception BEFORE Jest can write its JSON report:
+#
+#   /path/to/spec.ts:154
+#       orderRepositoryMock.search.mockRejectedValue(new Error('Unexpected error'));
+#                                                    ^
+#   [Error: Unexpected error]
+#   Node.js v18.16.0
+#
+# Groups: (1) file path  (2) line number  (3) Error class  (4) message
+_NODE_CRASH_RE = re.compile(
+    r"(.+\.spec\.ts):(\d+)\r?\n"           # file:line
+    r"(?:.*\r?\n){0,3}"                    # 0-3 lines of context/caret
+    r"\[(\w*Error): ([^\]]+)\]"            # [ErrorClass: message]
+    r"(?:\r?\nNode\.js)",                  # "Node.js" line confirms it's a crash
+    re.MULTILINE,
+)
+
+# Matches an it() / test() call with its title in the first string argument.
+# Works on a single source line — used when scanning backwards by line number.
+_IT_TITLE_RE = re.compile(
+    r"""\bit(?:\.skip|\.only)?\s*\(\s*['"`](.+?)['"`]"""
+)
+
+
+def _find_test_name_by_line(spec_file: str, crash_line: int) -> str | None:
+    """
+    Reads the spec file and scans backwards from crash_line to find the
+    nearest it() / test() title — i.e. the test block that contains the
+    crashing code.
+
+    Returns the test title string, or None if not found.
+    """
+    try:
+        lines = Path(spec_file).read_text(encoding="utf-8", errors="replace").splitlines()
+    except Exception as exc:
+        logger.warning(f"_find_test_name_by_line: could not read {spec_file}: {exc}")
+        return None
+
+    # Clamp to valid range (line numbers are 1-based in the crash output)
+    start = min(crash_line - 1, len(lines) - 1)
+
+    for i in range(start, -1, -1):
+        m = _IT_TITLE_RE.search(lines[i])
+        if m:
+            return m.group(1)
+
+    return None
+
+
+def _parse_node_crash(stderr: str) -> list[JestFailure]:
+    """
+    Detects an unhandled promise rejection / Node.js process crash in stderr
+    and converts it into a single JestFailure so that _repair_block() is
+    triggered instead of _whole_file_repair().
+
+    The crash happens when a test calls mockRejectedValue() (or similar async
+    mock) but the test body doesn't properly await / catch the rejection —
+    the unhandled rejection propagates and kills the Node process before Jest
+    can write the JSON report.
+
+    Repair strategy for the LLM:
+      Replace:  mockRejectedValue(new Error('...'))
+      With:     mockResolvedValueOnce(null)   (or the appropriate success value)
+      Or wrap:  await expect(...).rejects.toThrow(...)  if an exception IS expected.
+    """
+    match = _NODE_CRASH_RE.search(stderr)
+    if not match:
+        return []
+
+    spec_file  = match.group(1)
+    crash_line = int(match.group(2))
+    error_cls  = match.group(3)   # e.g. "Error"
+    error_msg  = match.group(4)   # e.g. "Unexpected error"
+
+    logger.warning(
+        f"Node.js crash detected at {spec_file}:{crash_line} — "
+        f"[{error_cls}: {error_msg}]"
+    )
+
+    test_name = _find_test_name_by_line(spec_file, crash_line)
+
+    if not test_name:
+        logger.warning(
+            f"_parse_node_crash: could not resolve test name for line {crash_line}"
+        )
+        return []
+
+    logger.info(
+        f"_parse_node_crash: attributed crash to test '{test_name}'"
+    )
+
+    error_message = (
+        f"Unhandled promise rejection at line {crash_line}: "
+        f"[{error_cls}: {error_msg}]\n"
+        f"The test likely calls mockRejectedValue() without a corresponding "
+        f"'await expect(...).rejects.toThrow()' assertion, "
+        f"causing the rejection to crash the Node process. "
+        f"Fix: either assert the rejection with rejects.toThrow(), "
+        f"or replace mockRejectedValue with mockResolvedValueOnce."
+    )
+
+    return [JestFailure(
+        test_name=test_name,
+        error_type="unhandled_rejection",
+        error_message=error_message,
+    )]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stderr bullet parser  (last resort)
+# ─────────────────────────────────────────────────────────────────────────────
+
+_ANSI_RE   = re.compile(r"\x1B\[[0-?]*[ -/]*[@-~]")
 _BULLET_RE = re.compile(r"^  ● (.+)$", re.MULTILINE)
 
 
 def _parse_from_stderr(stderr: str) -> list[JestFailure]:
     """
-    Fallback when the JSON report is unavailable.
-    Less reliable due to ANSI codes and variable formatting.
+    Fallback when the JSON report is unavailable and no Node.js crash was
+    detected.  Less reliable due to ANSI codes and variable formatting.
     """
-    stderr = _ANSI_RE.sub("", stderr)
+    stderr  = _ANSI_RE.sub("", stderr)
     bullets = list(_BULLET_RE.finditer(stderr))
 
     if not bullets:
@@ -170,12 +246,12 @@ def _parse_from_stderr(stderr: str) -> list[JestFailure]:
     failures: list[JestFailure] = []
 
     for i, match in enumerate(bullets):
-        test_name = match.group(1).strip()
+        test_name   = match.group(1).strip()
         block_start = match.end()
-        block_end = bullets[i + 1].start() if i + 1 < len(bullets) else len(stderr)
-        raw_block = stderr[block_start:block_end].strip()
+        block_end   = bullets[i + 1].start() if i + 1 < len(bullets) else len(stderr)
+        raw_block   = stderr[block_start:block_end].strip()
 
-        error_type = categorize_jest_error(raw_block)
+        error_type    = categorize_jest_error(raw_block)
         error_message = normalize_jest_error(raw_block, error_type)
 
         failures.append(JestFailure(
@@ -198,12 +274,15 @@ def parse_jest_failures(
     """
     Returns a list of JestFailure objects from a Jest run.
 
-    Prefers the JSON report for accuracy; falls back to stderr parsing.
+    Parse priority:
+      1. JSON report          — Jest completed, report written
+      2. Node.js crash        — process crashed before report; recover from stderr
+      3. Jest stderr bullets  — heuristic fallback
     """
     path = report_path or JEST_REPORT_PATH
 
+    # ── Path 1: JSON report ───────────────────────────────────────────────────
     from_report = _parse_from_report(path)
-
     if from_report is not None:
         logger.debug(
             f"parse_jest_failures: {len(from_report)} failure(s) from JSON report"
@@ -213,8 +292,21 @@ def parse_jest_failures(
         return from_report
 
     logger.warning(
-        "parse_jest_failures: JSON report not found, falling back to stderr"
+        "parse_jest_failures: JSON report not found, trying crash detection"
     )
+
+    # ── Path 2: Node.js crash ─────────────────────────────────────────────────
+    from_crash = _parse_node_crash(stderr)
+    if from_crash:
+        logger.info(
+            f"parse_jest_failures: {len(from_crash)} failure(s) from crash detection"
+        )
+        for f in from_crash:
+            logger.info(f"  [{f.error_type}] {f.test_name}")
+        return from_crash
+
+    # ── Path 3: Stderr bullets ────────────────────────────────────────────────
+    logger.warning("parse_jest_failures: falling back to stderr bullet parsing")
     failures = _parse_from_stderr(stderr)
     logger.debug(f"parse_jest_failures: {len(failures)} failure(s) from stderr")
     return failures
