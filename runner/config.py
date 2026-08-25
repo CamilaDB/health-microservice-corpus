@@ -45,40 +45,30 @@ MAX_RUNTIME_REPAIRS = int(os.getenv("MAX_RUNTIME_REPAIRS", '5'))
 MAX_TS_REPAIRS = int(os.getenv("MAX_TS_REPAIRS", '3'))
 
 MODELS = {
-    # "gemma_e4b": {
-    #     "provider": "ollama", DEU RUIM
-    #     "model": "gemma4:e4b",
-    # },
-    # "ornith_9b": { #TALVEZ - QUEBROU NO MEIO... MUITO LENTO
-    #     "provider": "ollama",
-    #     "model": "ornith:9b",
-    # },
-
     "gemma_4": {
         "provider": "ollama",
         "model": "gemma4:e2b",
     },
 
-    # "qwen_coder_3b": {
-    #     "provider": "ollama",
-    #     "model": "qwen2.5-coder:3b",
-    # },
+    "qwen_coder_3b": {
+        "provider": "ollama",
+        "model": "qwen2.5-coder:3b",
+    },
 
-    # "qwen_coder_7b": {
-    #     "provider": "ollama",
-    #     "model": "qwen2.5-coder:7b",
-    # },
+    "qwen_coder_7b": {
+        "provider": "ollama",
+        "model": "qwen2.5-coder:7b",
+    },
 
     # "llama70b": {
     #     "provider": "groq",
     #     "model": "llama-3.3-70b-versatile",
     # },
 
-
-    # "gpt_oss_120b": {
-    #     "provider": "openrouter",
-    #     "model": "openai/gpt-oss-120b:free",
-    # },
+    "gpt_oss_120b": {
+        "provider": "groq",
+        "model": "openai/gpt-oss-120b",
+    },
 }
 
 PROMPT_STRATEGIES = [

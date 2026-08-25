@@ -1,0 +1,16 @@
+model,strategy,total_tests,passed_tests,failed_tests,pending_tests,global_statements_total,global_statements_covered,global_statements_pct,global_branches_total,global_branches_covered,global_branches_pct,global_functions_total,global_functions_covered,global_functions_pct,global_lines_total,global_lines_covered,global_lines_pct
+gemma_4,zero_shot,0,0,0,0,67,18,26.86,99,16,16.16,7,4,57.14,61,16,26.22
+gemma_4,few_shot,65,51,0,14,327,157,48.01,338,118,34.91,32,28,87.5,311,149,47.9
+gemma_4,structured,111,89,0,22,327,262,80.12,338,238,70.41,32,30,93.75,311,250,80.38
+qwen_coder_3b,zero_shot,0,0,0,0,67,14,20.89,99,7,7.07,7,3,42.85,61,12,19.67
+qwen_coder_3b,few_shot,59,34,0,25,327,109,33.33,338,55,16.27,32,24,75.0,311,101,32.47
+qwen_coder_3b,structured,88,44,4,40,327,172,52.59,338,126,37.27,32,28,87.5,311,163,52.41
+qwen_coder_7b,zero_shot,0,0,0,0,67,21,31.34,99,12,12.12,7,4,57.14,61,19,31.14
+qwen_coder_7b,few_shot,61,37,0,24,327,141,43.11,338,99,29.28,32,25,78.12,311,133,42.76
+qwen_coder_7b,structured,103,74,0,29,327,240,73.39,338,202,59.76,32,28,87.5,311,229,73.63
+llama70b,structured,0,0,0,0,67,36,53.73,99,29,29.29,7,3,42.85,61,30,49.18
+gpt_oss_120b,structured,71,71,0,0,327,234,71.55,338,211,62.42,32,28,87.5,311,226,72.66
+gpt_oss_120b,zero_shot,81,79,0,2,327,285,87.15,338,248,73.37,32,30,93.75,311,269,86.49
+gpt_oss_120b,few_shot,77,71,0,6,327,252,77.06,338,225,66.56,32,30,93.75,311,236,75.88
+llama70b,zero_shot,0,0,0,0,67,29,43.28,99,46,46.46,7,3,42.85,61,27,44.26
+llama70b,few_shot,61,44,0,17,327,155,47.4,338,107,31.65,32,21,65.62,311,146,46.94
