@@ -65,8 +65,25 @@ export function extractDependencyCalls(m: MethodDeclaration): DependencyCall[] {
     )
       return;
 
+    // Only calls rooted at `this` are candidate dependency/self calls (a
+    // constructor-injected dependency, or another method on the class under
+    // test). A call on a local variable, DTO parameter, or a JS builtin
+    // (e.g. `Object.assign(...)`, `dto.email.toLowerCase()`,
+    // `validTransitions[status].includes(...)`, `Math.floor(...)`) is not a
+    // dependency by any definition used elsewhere in this codebase
+    // (_fmt_available_mocks and extractRelatedMethods both filter to
+    // `this.`-rooted chains) and must not be surfaced as one — the prompt's
+    // DEPENDENCY_CALLS section instructs the model to mock every entry here,
+    // which is only valid for genuine dependency/self calls.
+    if (!methodName.startsWith("this.")) return;
+
     const isAwaited =
       call.getParent()?.getKind() === SyntaxKind.AwaitExpression;
+    // Calls returned directly from an async service method are still
+    // asynchronous even without an `await` expression (for example,
+    // `return repository.save(entity)`).  Prompt guidance uses this flag to
+    // select mockResolvedValueOnce versus mockReturnValueOnce.
+    const returnsPromise = call.getReturnType().getText().includes("Promise<");
 
     let assignedTo: string | undefined;
     let returnUsed = false;
@@ -84,7 +101,7 @@ export function extractDependencyCalls(m: MethodDeclaration): DependencyCall[] {
     calls.push({
       method: methodName,
       kind: classifyDependencyCall(methodName),
-      isAsync: isAwaited,
+      isAsync: isAwaited || returnsPromise,
       returnUsed,
       assignedTo,
     });

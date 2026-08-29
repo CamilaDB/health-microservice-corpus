@@ -10,6 +10,14 @@ from utils.logging import logger
 # ─────────────────────────────────────────────────────────────────────────────
 
 APPEND_MARKER = "// TESTS_APPEND_HERE"
+_FN_WRAPPER_START = re.compile(
+    r"describe\(\s*['\"](?P<id>FN_[^'\"]+_END)['\"]\s*,\s*\(\)\s*=>\s*\{"
+)
+
+# In-memory snapshots make installation reversible even if the corpus gains
+# manually maintained specs in the future.  The runner is sequential, so a
+# path is never installed concurrently by two executions.
+_TEMP_SPEC_BACKUPS: dict[Path, bytes | None] = {}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -49,6 +57,29 @@ def create_spec_file(
     generated_path.write_text(normalized, encoding="utf-8")
 
     return generated_path
+
+
+def snapshot_spec_file(*, generated_spec_path: Path, fn_id: str) -> Path:
+    """Create a function-scoped rollback snapshot beside a generated spec."""
+    backup_path = generated_spec_path.parent / (
+        f"{generated_spec_path.stem}.{fn_id}.bak{generated_spec_path.suffix}"
+    )
+    if backup_path.exists():
+        backup_path.unlink()
+    shutil.copy2(generated_spec_path, backup_path)
+    return backup_path
+
+
+def function_wrapper_blocks(spec_content: str) -> dict[str, str]:
+    """Return canonical wrapper slices used to protect prior observations."""
+    matches = list(_FN_WRAPPER_START.finditer(spec_content))
+    blocks = {}
+    for index, match in enumerate(matches):
+        end = matches[index + 1].start() if index + 1 < len(matches) else spec_content.find(
+            APPEND_MARKER, match.end()
+        )
+        blocks[match.group("id")] = spec_content[match.start(): end if end >= 0 else len(spec_content)]
+    return blocks
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -183,22 +214,6 @@ def count_unclosed_scopes(block: str) -> tuple[int, int, int]:
     return (max(0, braces), max(0, parens), max(0, brackets))
 
 
-def _remove_last_incomplete_test(block: str) -> str:
-    matches = list(re.finditer(r"^\s*it\s*\(", block, re.MULTILINE))
-    if not matches:
-        return block
-    for i in reversed(range(len(matches))):
-        start = matches[i].start()
-        tail = block[start:]
-        if tail.count("{") > tail.count("}"):
-            trimmed = block[:start].rstrip()
-            logger.warning(
-                f"_remove_last_incomplete_test: dropped incomplete it() at offset {start}"
-            )
-            return trimmed
-    return block
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Block validation and cleaning
 # ─────────────────────────────────────────────────────────────────────────────
@@ -271,13 +286,19 @@ def install_temp_spec(
 ) -> Path:
     target = CORPUS_DIR / relative_output_path
     target.parent.mkdir(parents=True, exist_ok=True)
+    if target not in _TEMP_SPEC_BACKUPS:
+        _TEMP_SPEC_BACKUPS[target] = target.read_bytes() if target.exists() else None
     shutil.copyfile(generated_file, target)
     return target
 
 
 def remove_temp_spec(target: Path) -> None:
-    if target.exists():
-        target.unlink()
+    original = _TEMP_SPEC_BACKUPS.pop(target, None)
+    if original is None:
+        if target.exists():
+            target.unlink()
+        return
+    target.write_bytes(original)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

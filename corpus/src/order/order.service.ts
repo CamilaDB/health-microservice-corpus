@@ -89,12 +89,6 @@ export class OrderService {
       );
     }
 
-    if (order.status === OrderStatus.COMPLETED) {
-      throw new BadRequestException(
-        `Order already completed (id: ${orderId}). Cannot add another result`,
-      );
-    }
-
     const encounter = await this.encounterService.getEncounterById(
       order.encounterId,
     );
@@ -105,14 +99,34 @@ export class OrderService {
       );
     }
 
-    const hasClosedResult = order.results?.some(
-      (r) =>
-        (r as unknown as { status: ResultStatus }).status ===
-          ResultStatus.FINAL ||
-        (r as unknown as { status: ResultStatus }).status ===
-          ResultStatus.CORRECTED,
+    const hasFinalResult = order.results?.some(
+      (r) => (r as { status: ResultStatus }).status === ResultStatus.FINAL,
     );
-    if (hasClosedResult) {
+    const hasCorrectedResult = order.results?.some(
+      (r) => (r as { status: ResultStatus }).status === ResultStatus.CORRECTED,
+    );
+
+    if (incomingStatus === ResultStatus.CORRECTED) {
+      if (order.status !== OrderStatus.COMPLETED) {
+        throw new BadRequestException(
+          'Cannot register a CORRECTED result until the order is COMPLETED',
+        );
+      }
+      if (!hasFinalResult || hasCorrectedResult) {
+        throw new BadRequestException(
+          `Order (id: ${orderId}) must have exactly one final result available for correction`,
+        );
+      }
+      return order;
+    }
+
+    if (order.status === OrderStatus.COMPLETED) {
+      throw new BadRequestException(
+        `Order already completed (id: ${orderId}). Cannot add another result`,
+      );
+    }
+
+    if (hasFinalResult || hasCorrectedResult) {
       throw new BadRequestException(
         `Order (id: ${orderId}) already has a final or corrected result`,
       );
@@ -124,15 +138,6 @@ export class OrderService {
     ) {
       throw new BadRequestException(
         'Cannot register a FINAL result for a PENDING order. Order must be IN_PROGRESS first',
-      );
-    }
-
-    if (
-      order.status === OrderStatus.PENDING &&
-      incomingStatus === ResultStatus.CORRECTED
-    ) {
-      throw new BadRequestException(
-        'Cannot register a CORRECTED result for a PENDING order',
       );
     }
 

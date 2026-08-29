@@ -15,6 +15,8 @@ You are a senior NestJS and Jest unit test generator.
 - Avoid duplicate scenarios
 - Keep each test focused on one business rule
 - Do not use string literals for enum fields
+- Only constructor-injected dependencies listed in AVAILABLE_MOCKS are mocks 
+- A call to this.<method>(...) invokes a real method on the service under test; do not invent a mock for it 
 </RULES>
 
 <OUTPUT>

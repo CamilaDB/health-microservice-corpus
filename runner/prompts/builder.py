@@ -7,8 +7,6 @@ from models.function_context import (
     ExtractedDto,
     ExtractedEnum,
     DependencyCall,
-    MethodDependencyUsage,
-    Transformation,
     ConstructorDep,
 )
 from models.method_generated_context import MethodGenerationContext
@@ -47,14 +45,6 @@ def _fmt_branches(branches: list[ExtractedBranch]) -> str:
     )
 
 
-def _fmt_dependency_usages(usages: list[MethodDependencyUsage]) -> str:
-    return "\n\n".join(
-        f"Method: {u.method}\n"
-        f"Accessed properties: {', '.join(u.accessedProperties) or 'none'}"
-        for u in usages
-    )
-
-
 def _fmt_dependency_calls(calls: list[DependencyCall]) -> str:
     return "\n\n".join(
         f"Method: {c.method}\n"
@@ -66,24 +56,10 @@ def _fmt_dependency_calls(calls: list[DependencyCall]) -> str:
     )
 
 
-def _fmt_transformations(transformations: list[Transformation]) -> str:
-    return "\n\n".join(
-        f"Target field: {t.targetField}\n"
-        f"Expression: {t.sourceExpression}\n"
-        f"Kind: {t.kind}"
-        for t in transformations
-    )
-
-
 def _fmt_constructor_deps(deps: list[ConstructorDep]) -> str:
     return "\n".join(f"- {d.name}: {d.type}" for d in deps)
 
 
-def _fmt_list(items: list[str]) -> str:
-    return "\n".join(f"- {item}" for item in items)
-
-
-# TODO: add to functions json
 def _fmt_available_mocks(
     deps: list[ConstructorDep],
     calls: list[DependencyCall],
@@ -192,20 +168,6 @@ def build_prompt(
         spec_content=spec_for_prompt,
     )
 
-    is_async = ctx.isAsync
-    if is_async is True:
-        rules = f"- Use: await expect(service.{ctx.functionName}()).rejects.toThrow(ExceptionClass)"
-    elif is_async is False:
-        rules = f"- Use: expect(() => service.{ctx.functionName}()).toThrow(ExceptionClass)"
-    else:
-        rules = (
-            "- Sync functions: expect(() => service.METHOD()).toThrow(ExceptionClass)\n"
-            "- Async functions: await expect(service.METHOD()).rejects.toThrow(ExceptionClass)"
-        )
-
-    # if function_data.range == 'high':
-        # rules += "\n- Generate at most 10 it() blocks. Prioritize error paths first, then happy path."
-
     replacements = {
         "{{FUNCTION_NAME}}":
             function_data.name,
@@ -254,8 +216,6 @@ def build_prompt(
 
         "{{EXISTING_SPEC_FILE}}":
             spec_for_prompt,
-
-        "{{RULES}}": rules,
     }
 
     for key, value in replacements.items():

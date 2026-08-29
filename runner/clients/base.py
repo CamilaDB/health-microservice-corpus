@@ -5,4 +5,4 @@ class BaseClient(ABC):
 
     @abstractmethod
     def generate(self, prompt: str):
-        pass
+        raise NotImplementedError

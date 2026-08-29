@@ -41,6 +41,29 @@ def _skip_test_block(*, generated_spec_path, test_name, describe_name):
         return False
 
 
+def skip_failed_tests_for_function(*, generated_spec_path, describe_name, jest_stderr):
+    failures = parse_jest_failures(jest_stderr)
+    if not failures:
+        logger.warning(
+            "skip_failed_tests_for_function: no parseable Jest failures; "
+            "leaving existing generated block unchanged to prevent silent global pollution."
+        )
+        return False
+
+    skipped = 0
+    for failure in failures:
+        if _skip_test_block(
+            generated_spec_path=generated_spec_path,
+            test_name=failure.test_name,
+            describe_name=describe_name,
+        ):
+            skipped += 1
+    logger.warning(
+        f"Skipped {skipped}/{len(failures)} failing tests in describe '{describe_name}'"
+    )
+    return skipped > 0
+
+
 def normalize_block(block): return "".join(block.split())
 
 

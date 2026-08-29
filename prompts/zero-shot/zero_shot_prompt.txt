@@ -6,6 +6,10 @@ Generate Jest unit tests for the target function.
 {{FUNCTION_NAME}}
 </FUNCTION_NAME>
 
+<METHOD_SOURCE>
+{{METHOD_SOURCE}}
+</METHOD_SOURCE>
+
 <AVAILABLE_MOCKS>
 {{AVAILABLE_MOCKS}}
 </AVAILABLE_MOCKS>

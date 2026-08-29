@@ -1,8 +1,17 @@
+import shutil
 import subprocess
 from pathlib import Path
 
 from config import CORPUS_DIR, JEST_REPORT_PATH, TMP_DIR
 from models.jest_result import JestResult
+
+
+def clear_execution_artifacts() -> None:
+    """Remove every report from the prior Jest invocation before a new run."""
+    coverage_dir = TMP_DIR / "coverage"
+    if coverage_dir.exists():
+        shutil.rmtree(coverage_dir)
+    coverage_dir.mkdir(parents=True, exist_ok=True)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -26,8 +35,7 @@ def run_jest(
 
     Both files land in TMP_DIR/coverage/.
     """
-    if JEST_REPORT_PATH.exists():
-        JEST_REPORT_PATH.unlink()
+    clear_execution_artifacts()
 
     relative_spec = spec_path.relative_to(CORPUS_DIR)
 
@@ -87,8 +95,7 @@ def run_jest_service(
     Only json-summary is needed here: no line-range filtering is done
     at this level, so the heavy coverage-final.json is skipped.
     """
-    if JEST_REPORT_PATH.exists():
-        JEST_REPORT_PATH.unlink()
+    clear_execution_artifacts()
 
     relative_spec = spec_path.relative_to(CORPUS_DIR)
 
@@ -134,8 +141,7 @@ def run_jest_global(spec_paths: list[Path]) -> JestResult:
     Collects from all service files via glob; no per-file filtering.
     Only json-summary is needed.
     """
-    if JEST_REPORT_PATH.exists():
-        JEST_REPORT_PATH.unlink()
+    clear_execution_artifacts()
 
     relative_specs = [str(p.relative_to(CORPUS_DIR)) for p in spec_paths]
 

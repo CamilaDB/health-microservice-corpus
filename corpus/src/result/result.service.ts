@@ -181,10 +181,10 @@ export class ResultService {
 
     const newMin =
       dto.referenceMin ??
-      (result.referenceMin ? Number(result.referenceMin) : null);
+      (result.referenceMin !== null ? Number(result.referenceMin) : null);
     const newMax =
       dto.referenceMax ??
-      (result.referenceMax ? Number(result.referenceMax) : null);
+      (result.referenceMax !== null ? Number(result.referenceMax) : null);
 
     if (newMin !== null && newMax !== null && newMin >= newMax) {
       throw new BadRequestException(

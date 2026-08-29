@@ -79,7 +79,9 @@ Do NOT redeclare anything already declared here.
 
 <CONSTRAINTS>
 * Generate exactly one describe('{{FUNCTION_NAME}}') block
-* Generate one it() per branch listed in BRANCHES
+* Always generate at least one it() test for {{FUNCTION_NAME}}
+* When BRANCHES lists entries, generate one it() per branch listed
+* When BRANCHES is empty or none, generate tests covering the function's observable behavior instead: return value, side effects, dependency calls, default values, and error conditions, as applicable
 * Earlier guard branches MUST be satisfied before testing deeper branches
 * Use mockResolvedValueOnce for async calls, mockReturnValueOnce for sync calls
 * Async exception: await expect(service.{{FUNCTION_NAME}}(...)).rejects.toThrow(ExceptionClass)

@@ -15,7 +15,7 @@ export function cleanType(typeText: string): string {
 
 export function cleanText(text: string): string {
   return text
-    .replace(/[^\x00-\x7F]/g, "")
+    .replace(/\r\n?/g, "\n")
     .replace(/\n\s*\n\s*\n/g, "\n\n")
     .trim();
 }

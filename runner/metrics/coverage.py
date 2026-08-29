@@ -65,11 +65,16 @@ def _find_file_entry(coverage_data: dict, target_source_file: str) -> dict | Non
 # Test metrics  (common across all three levels)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def extract_test_metrics() -> dict:
+def extract_test_metrics(fn_id: str | None = None) -> dict:
     """
-    Reads the Jest JSON report (--outputFile) and returns test-count metrics.
-    These are always from the most recent run, regardless of coverage level.
+    Reads the Jest JSON report and returns test-case metrics.
+
+    When fn_id is provided, counts only assertionResults belonging
+    to the target function identified by fn_id.
+
+    Without fn_id, returns the global Jest counters.
     """
+
     _empty = {
         "total_tests": 0,
         "passed_tests": 0,
@@ -81,13 +86,63 @@ def extract_test_metrics() -> dict:
     if data is None:
         return _empty
 
-    return {
-        "total_tests":   data.get("numTotalTests",   0),
-        "passed_tests":  data.get("numPassedTests",  0),
-        "failed_tests":  data.get("numFailedTests",  0),
-        "pending_tests": data.get("numPendingTests", 0),
-    }
+    if not fn_id:
+        total = data.get("numTotalTests", 0)
+        if total == 0 and (data.get("numRuntimeErrorTestSuites", 0) > 0 or data.get("numFailedTestSuites", 0) > 0):
+            return {
+                "total_tests": -1,
+                "passed_tests": 0,
+                "failed_tests": 0,
+                "pending_tests": 0,
+            }
+        return {
+            "total_tests": total,
+            "passed_tests": data.get("numPassedTests", 0),
+            "failed_tests": data.get("numFailedTests", 0),
+            "pending_tests": data.get("numPendingTests", 0),
+        }
 
+    total = passed = failed = pending = 0
+
+    for suite in data.get("testResults", []):
+        for assertion in suite.get("assertionResults", []):
+            ancestor_titles = assertion.get("ancestorTitles") or []
+            title = assertion.get("title") or ""
+            full_name = assertion.get("fullName") or ""
+
+            belongs_to_function = (
+                fn_id in ancestor_titles
+                or fn_id in title
+                or fn_id in full_name
+            )
+
+            if not belongs_to_function:
+                continue
+
+            total += 1
+            status = assertion.get("status")
+
+            if status == "passed":
+                passed += 1
+            elif status == "failed":
+                failed += 1
+            elif status in {"pending", "skipped", "todo"}:
+                pending += 1
+
+    if total == 0 and (data.get("numRuntimeErrorTestSuites", 0) > 0 or data.get("numFailedTestSuites", 0) > 0):
+        return {
+            "total_tests": -1,
+            "passed_tests": 0,
+            "failed_tests": 0,
+            "pending_tests": 0,
+        }
+
+    return {
+        "total_tests": total,
+        "passed_tests": passed,
+        "failed_tests": failed,
+        "pending_tests": pending,
+    }
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Level 1 — per-function coverage  (coverage-final.json + line range filter)

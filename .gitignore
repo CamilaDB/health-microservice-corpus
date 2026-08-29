@@ -1,9 +1,27 @@
+# Environment files
 .env
-__pycache__
-node_modules
-coverage
+.env.*
 
-_old
-.venv
+# Python caches and virtual environments
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
 
-tmp
+# Node / JS runtime files
+node_modules/
+.npm/
+coverage/
+
+# Build and transient output
+build/
+dist/
+.tmp/
+tmp/
+
+# Editor and OS files
+.DS_Store
+.vscode/
+
+.stryker-tmp*

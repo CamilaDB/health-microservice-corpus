@@ -43,9 +43,6 @@ Commands:
   process.exit(0);
 }
 
-// "all" runs complexity first (for the human report), then functions + bootstrap.
-// functions no longer reads from complexity_report.json — CCM is computed in-memory —
-// so the order only matters for producing a complete output/ folder.
 if (cmd === "all") {
   run(COMMANDS.complexity);
   run(COMMANDS.functions);
@@ -55,15 +52,6 @@ if (cmd === "all") {
 
 if (cmd in COMMANDS) {
   run(COMMANDS[cmd as keyof typeof COMMANDS]);
-  process.exit(0);
-}
-
-// Legacy alias kept for backwards compat with any scripts that called "extract"
-if (cmd === "extract") {
-  console.warn(
-    '[cli] "extract" is deprecated — context is now embedded in "functions". Running "functions" instead.',
-  );
-  run(COMMANDS.functions);
   process.exit(0);
 }
 
