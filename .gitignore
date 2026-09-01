@@ -25,3 +25,5 @@ tmp/
 .vscode/
 
 .stryker-tmp*
+
+logs

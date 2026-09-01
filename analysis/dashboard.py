@@ -1,3 +1,11 @@
+"""
+Streamlit exploration dashboard for the frozen experiment.
+
+Deliberately has no metric-calculation logic of its own: every load_*/
+build_* call below comes from analysis/experiment_analysis.py, the single
+source of truth also used to generate the static tables/figures. This
+file only handles filtering, layout, and presentation.
+"""
 from __future__ import annotations
 
 from pathlib import Path
@@ -5,72 +13,61 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-ROOT_DIR = Path(__file__).resolve().parent.parent
-RESULTS_PATH = ROOT_DIR / "experiments" / "metrics" / "results.csv"
-MUTATION_PATH = ROOT_DIR / "experiments" / "metrics" / "mutation_results.csv"
-SMELL_PATH = ROOT_DIR / "experiments" / "metrics" / "smell_results.csv"
+import experiment_analysis as ea
+
+st.set_page_config(page_title="TCC Experimental Dashboard", layout="wide")
 
 
-def _as_bool(series: pd.Series) -> pd.Series:
-    return series.astype("string").str.strip().str.lower().isin({"true", "1", "yes"})
+# ─────────────────────────────────────────────────────────────────────────────
+# Cached loads -- all delegate to experiment_analysis.py
+# ─────────────────────────────────────────────────────────────────────────────
 
-
-def load_data(path: Path = RESULTS_PATH) -> pd.DataFrame:
-    if not path.exists():
-        raise FileNotFoundError(f"Results CSV not found: {path}")
-
-    df = pd.read_csv(path)
-    for column in [
-        "ccm",
-        "duration_ns",
-        "tokens",
-        "total_tests",
-        "passed_tests",
-        "failed_tests",
-        "pending_tests",
-        "fn_statements_total",
-        "fn_statements_covered",
-        "fn_statements_pct",
-        "fn_branches_total",
-        "fn_branches_covered",
-        "fn_branches_pct",
-        "fn_functions_total",
-        "fn_functions_covered",
-        "fn_functions_pct",
-        "fn_lines_total",
-        "fn_lines_covered",
-        "fn_lines_pct",
-    ]:
-        if column in df.columns:
-            df[column] = pd.to_numeric(df[column], errors="coerce")
-
-    if "generation_success" in df.columns:
-        df["generation_success"] = _as_bool(df["generation_success"])
-    if "jest_success" in df.columns:
-        df["jest_success"] = _as_bool(df["jest_success"])
-    if "analysis_eligible" in df.columns:
-        df["analysis_eligible"] = _as_bool(df["analysis_eligible"])
-    else:
-        df["analysis_eligible"] = df.get("generation_success", False) & df.get("jest_success", False)
-
-    return df
+@st.cache_data
+def get_results() -> pd.DataFrame:
+    return ea.load_results()
 
 
 @st.cache_data
-def get_data() -> pd.DataFrame:
-    return load_data()
+def get_mutation() -> pd.DataFrame:
+    return ea.load_mutation_results()
 
 
 @st.cache_data
-def get_mutation_data() -> pd.DataFrame:
-    if not MUTATION_PATH.exists():
-        return pd.DataFrame()
+def get_smell() -> pd.DataFrame:
+    return ea.load_smell_results()
 
-    df = pd.read_csv(MUTATION_PATH)
-    if "mutation_score" in df.columns:
-        df["mutation_score"] = pd.to_numeric(df["mutation_score"], errors="coerce")
-    return df
 
+@st.cache_data
+def get_errors_raw() -> pd.DataFrame:
+    return ea.load_error_events()
+
+
+@st.cache_data
+def get_errors_reclassified() -> pd.DataFrame:
+    return ea.build_reclassified_error_events(get_errors_raw())
+
+
+@st.cache_data
+def get_manifest(run_id: str | None) -> dict | None:
+    return ea.load_latest_run_manifest(run_id)
+
+
+def metric_card(label: str, value: str, delta: str | None = None) -> None:
+    st.markdown(
+        f"""
+        <div style="border: 1px solid #ddd; border-radius: 8px; padding: 1rem; margin-bottom: 0.75rem;">
+          <div style="color: #666; font-size: 0.8rem;">{label}</div>
+          <div style="font-size: 1.8rem; font-weight: 700; margin-top: 0.2rem;">{value}</div>
+          {f'<div style="color: #666; font-size: 0.8rem; margin-top: 0.2rem;">{delta}</div>' if delta else ''}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Sidebar filters (UX only -- filtering happens here, calculation does not)
+# ─────────────────────────────────────────────────────────────────────────────
 
 def sidebar_filters(df: pd.DataFrame) -> pd.DataFrame:
     st.sidebar.header("Filtros")
@@ -81,7 +78,10 @@ def sidebar_filters(df: pd.DataFrame) -> pd.DataFrame:
     function_options = sorted(df["function"].dropna().unique().tolist()) if "function" in df.columns else []
     run_options = sorted(df["run_id"].dropna().unique().tolist()) if "run_id" in df.columns else []
 
-    selected_run = st.sidebar.selectbox("Execu\u00e7\u00e3o", run_options, index=len(run_options) - 1) if run_options else None
+    selected_run = (
+        st.sidebar.selectbox("Execução (run_id)", run_options, index=len(run_options) - 1)
+        if run_options else None
+    )
     selected_models = st.sidebar.multiselect("Modelo", model_options, default=model_options)
     selected_strategies = st.sidebar.multiselect("Estratégia", strategy_options, default=strategy_options)
     selected_modules = st.sidebar.multiselect("Módulo", module_options, default=module_options)
@@ -99,225 +99,330 @@ def sidebar_filters(df: pd.DataFrame) -> pd.DataFrame:
     if selected_functions:
         filtered = filtered[filtered["function"].isin(selected_functions)]
 
-    return filtered
+    return filtered, selected_run
 
 
-def metric_card(label: str, value: str, delta: str | None = None) -> None:
-    st.markdown(
-        f"""
-        <div style="border: 1px solid #ddd; border-radius: 8px; padding: 1rem; margin-bottom: 0.75rem;">
-          <div style="color: #666; font-size: 0.8rem;">{label}</div>
-          <div style="font-size: 1.8rem; font-weight: 700; margin-top: 0.2rem;">{value}</div>
-          {f'<div style="color: #666; font-size: 0.8rem; margin-top: 0.2rem;">{delta}</div>' if delta else ''}
-        </div>
-        """,
-        unsafe_allow_html=True,
+# ─────────────────────────────────────────────────────────────────────────────
+# Sections
+# ─────────────────────────────────────────────────────────────────────────────
+
+def section_overview(df: pd.DataFrame) -> None:
+    st.header("1. Overview")
+    st.caption(
+        "verified_success_rate exclui observações totalmente skip-repaired "
+        "(jest_success == True mas nenhum teste foi de fato verificado). "
+        "raw_jest_success_rate é mantida apenas para rastreabilidade."
+    )
+    summary = ea.build_summary_by_model_strategy(df)
+    if summary.empty:
+        st.warning("Nenhuma observação corresponde aos filtros selecionados.")
+        return
+
+    total_attempted = int(summary["observations_attempted"].sum())
+    total_verified = int(summary["verified_eligible_count"].sum())
+    total_skipped = int(summary["fully_skipped_count"].sum())
+    verified_rate = round(100 * total_verified / total_attempted, 2) if total_attempted else 0.0
+
+    cols = st.columns(5)
+    with cols[0]:
+        metric_card("Observações tentadas", f"{total_attempted}")
+    with cols[1]:
+        metric_card("Sucesso verificado", f"{verified_rate:.1f}%", f"{total_verified} observações")
+    with cols[2]:
+        metric_card("Totalmente skip-repaired", f"{total_skipped}", "excluídas do sucesso verificado")
+    with cols[3]:
+        mean_cov = df.loc[df["verified_eligible"], "fn_statements_pct"].mean() if "fn_statements_pct" in df.columns else float("nan")
+        metric_card("Cobertura média (statements)", f"{mean_cov:.1f}%" if pd.notna(mean_cov) else "n/d")
+    with cols[4]:
+        mean_tokens = df["tokens"].mean() if "tokens" in df.columns else float("nan")
+        metric_card("Tokens médios / observação", f"{mean_tokens:.0f}" if pd.notna(mean_tokens) else "n/d")
+
+    st.subheader("Resultado da execução por modelo × estratégia")
+    st.dataframe(summary, use_container_width=True)
+
+
+def section_model_comparison(df: pd.DataFrame) -> None:
+    st.header("2. Model comparison")
+    summary = ea.build_summary_by_model_strategy(df)
+    if summary.empty:
+        return
+    c1, c2 = st.columns(2)
+    with c1:
+        st.subheader("Taxa de sucesso verificado")
+        st.bar_chart(summary.pivot(index="model", columns="strategy", values="verified_success_rate").fillna(0))
+    with c2:
+        st.subheader("Cobertura de statements média (sucesso verificado)")
+        st.bar_chart(summary.pivot(index="model", columns="strategy", values="mean_statement_coverage").fillna(0))
+    st.dataframe(summary, use_container_width=True)
+
+
+def section_strategy_comparison(df: pd.DataFrame) -> None:
+    st.header("3. Strategy comparison")
+    summary = ea.build_summary_by_model_strategy(df)
+    if summary.empty:
+        return
+    strategy_summary = (
+        summary.groupby("strategy", dropna=False)
+        .agg(
+            verified_success_rate=("verified_success_rate", "mean"),
+            mean_statement_coverage=("mean_statement_coverage", "mean"),
+            mean_total_tests=("mean_total_tests", "mean"),
+            fully_skipped_count=("fully_skipped_count", "sum"),
+        )
+        .round(2)
+        .reset_index()
+    )
+    st.bar_chart(strategy_summary.set_index("strategy")[["verified_success_rate", "mean_statement_coverage"]])
+    st.dataframe(strategy_summary, use_container_width=True)
+    st.caption("Média não ponderada entre modelos, por estratégia -- diagnóstico, não um ranking definitivo.")
+
+
+def section_complexity(df: pd.DataFrame, smell: pd.DataFrame) -> None:
+    st.header("4. Complexity analysis (H2)")
+    st.caption(
+        "H2: a qualidade dos testes gerados diminui com a complexidade ciclomática, mais "
+        "fortemente para modelos menores. Ordem de modelo definida pela configuração já "
+        "documentada do experimento: gemma4:e2b < qwen2.5-coder:3b < qwen2.5-coder:7b."
+    )
+
+    by_model = ea.build_h2_coverage_by_model_ccm(df)
+    if by_model.empty:
+        st.info("Sem dados de CCM disponíveis.")
+        return
+
+    small_n = by_model[by_model["verified_observations"].fillna(0) <= 3]
+    if not small_n.empty:
+        st.warning(
+            "Células com amostra pequena (≤ 3 observações verificadas): "
+            + ", ".join(
+                f"{row.model}/{row.ccm_band} (n={int(row.verified_observations)})"
+                for row in small_n.itertuples()
+            )
+        )
+
+    st.subheader("Cobertura média de statements por modelo × faixa de CCM")
+    pivot = by_model.pivot(index="ccm_band", columns="model", values="mean_statement_coverage")
+    st.bar_chart(pivot)
+
+    st.subheader("Tabela H2 completa (modelo × estratégia × faixa de CCM)")
+    st.caption(
+        "attempted_observations inclui tudo; fully_skipped_observations são não mensuráveis "
+        "(passed_tests == 0), NÃO zero de cobertura; as colunas de cobertura vêm somente de "
+        "verified_observations."
+    )
+    full_table = ea.build_h2_coverage_table(df)
+    st.dataframe(full_table, use_container_width=True)
+
+    st.subheader("Achado complementar: assertion roulette por CCM (Opção A)")
+    st.caption(
+        "Function-level e mapeável a CCM, mas sem tendência clara de degradação por "
+        "complexidade neste conjunto de dados -- reportado por completude, não usado como "
+        "evidência primária de H2."
+    )
+    h2_smell = ea.build_h2_smell_table(smell) if not smell.empty else pd.DataFrame()
+    if not h2_smell.empty:
+        st.dataframe(h2_smell, use_container_width=True)
+    else:
+        st.info("Sem dados de smell disponíveis para os filtros selecionados.")
+
+    st.subheader("Por que mutation score não é usado para H2")
+    st.caption(
+        "mutation_results.csv é uma linha por (modelo, estratégia, módulo) -- um módulo "
+        "abrange várias faixas de CCM (ex.: 'encounter' tem funções de 1-5 e de >20), então "
+        "não existe um mapeamento válido de mutation score para uma faixa de CCM individual "
+        "sem fabricar dados nunca medidos nessa granularidade."
     )
 
 
-st.set_page_config(page_title="TCC Experimental Dashboard", layout="wide")
+def section_function_explorer(df: pd.DataFrame) -> None:
+    st.header("5. Function-level explorer")
+    st.caption("verified_eligible e fully_skipped tornam visível o que jest_success sozinho esconde.")
+    detail_cols = [
+        "model", "strategy", "module", "function", "fn_id", "ccm",
+        "total_tests", "passed_tests", "failed_tests", "pending_tests",
+        "jest_success", "verified_eligible", "fully_skipped", "artifact_disposition",
+        "fn_statements_pct", "fn_branches_pct", "fn_functions_pct",
+    ]
+    available = [c for c in detail_cols if c in df.columns]
+    details = df[available].copy()
+    if "fn_statements_pct" in details.columns:
+        details["fn_statements_pct"] = details["fn_statements_pct"].round(2)
+    st.dataframe(details, use_container_width=True)
 
+    skipped = df[df["fully_skipped"]] if "fully_skipped" in df.columns else pd.DataFrame()
+    if not skipped.empty:
+        st.subheader(f"Observações totalmente skip-repaired ({len(skipped)})")
+        st.dataframe(skipped[available], use_container_width=True)
+
+
+def section_errors_and_repairs(errors: pd.DataFrame) -> None:
+    st.header("6. Errors and repairs")
+    if errors.empty:
+        st.info("Nenhum evento de erro disponível para os filtros selecionados.")
+        return
+    st.caption(
+        "error_category/error_subcategory abaixo são os valores RECLASSIFICADOS (Fase 3, diagnóstico); "
+        "os originais ficam em error_category_original/error_subcategory_original. "
+        "Diagnóstico apenas -- nunca uma métrica de desempenho primária."
+    )
+
+    top = ea.build_top_failure_modes(errors, top_n=5)
+    st.subheader("Modos de falha mais comuns por modelo × estratégia")
+    st.dataframe(top, use_container_width=True)
+
+    st.subheader("Eventos por fase")
+    st.dataframe(ea.build_error_summary_by_phase(errors), use_container_width=True)
+
+    st.subheader("Assinaturas de erro repetidas (mesmo error_hash, ≥2 ocorrências)")
+    repeated = ea.build_repeated_error_signatures(errors)
+    st.dataframe(repeated, use_container_width=True)
+    if not repeated.empty:
+        st.caption(
+            "Uma assinatura repetida em vários attempts geralmente significa que o mecanismo de "
+            "repair nunca conseguiu agir sobre essa falha (ex.: falha não parseável) -- não que a "
+            "correção foi tentada e falhou repetidamente."
+        )
+
+
+def section_mutation(mutation: pd.DataFrame) -> None:
+    st.header("7. Mutation analysis")
+    if mutation.empty:
+        st.info("Sem resultados de mutação disponíveis.")
+        return
+    summary = ea.build_mutation_summary_by_model_strategy(mutation)
+    st.caption(
+        "mutation_score_corrected: killed / (killed+survived+no_coverage+timeout); "
+        "compile_error excluído do denominador. mutation_score_stryker_unweighted_mean é o valor "
+        "original (média não ponderada por módulo, sem no_coverage) -- mantido só para rastreabilidade."
+    )
+    chart_df = summary.copy()
+    chart_df["group"] = chart_df["model"] + " / " + chart_df["strategy"]
+    chart_df = chart_df.set_index("group")
+
+    c1, c2 = st.columns(2)
+    with c1:
+        st.subheader("Mutation score corrigido")
+        st.bar_chart(chart_df[["mutation_score_corrected"]])
+    with c2:
+        st.subheader("Participação de mutantes sem cobertura (no_coverage_share)")
+        st.bar_chart(chart_df[["no_coverage_share"]])
+    st.dataframe(summary, use_container_width=True)
+
+
+def section_smells(smell: pd.DataFrame) -> None:
+    st.header("8. Test smells")
+    if smell.empty:
+        st.info("Sem resultados de test smell disponíveis.")
+        return
+    summary = ea.build_smell_summary_by_model_strategy(smell)
+    st.caption(
+        "Taxas calculadas apenas sobre observações com it_active > 0 (measurable_functions). "
+        "unmeasurable_functions (totalmente skip-repaired) são excluídas, não tratadas como 0% smell."
+    )
+    chart_df = summary.copy()
+    chart_df["group"] = chart_df["model"] + " / " + chart_df["strategy"]
+    st.bar_chart(chart_df.set_index("group")[["assertion_roulette_rate", "empty_test_rate"]])
+    st.dataframe(summary, use_container_width=True)
+
+
+def section_provenance(run_id: str | None) -> None:
+    st.header("9. Experiment provenance")
+    manifest = get_manifest(run_id)
+    if manifest is None:
+        st.info("Nenhum run manifest encontrado em experiments/runs/.")
+        return
+
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        metric_card("run_id", str(manifest.get("run_id", "n/d")))
+    with c2:
+        metric_card("target_count", str(manifest.get("target_count", "n/d")))
+    with c3:
+        metric_card("error_event_schema_version", str(manifest.get("error_event_schema_version", "n/d")))
+
+    st.subheader("Configuração")
+    st.json({
+        k: manifest.get(k)
+        for k in ("created_at", "unit_of_analysis", "models", "strategies", "temperature",
+                   "max_tokens", "max_runtime_repairs", "max_typescript_repairs", "ast_generated_at")
+        if k in manifest
+    })
+
+    if "corpus_provenance" in manifest:
+        cp = manifest["corpus_provenance"]
+        st.subheader("Corpus provenance")
+        st.write(f"Arquivos: {cp.get('file_count', 'n/d')} — fingerprint: `{cp.get('fingerprint', 'n/d')}`")
+
+    if "prompt_hashes" in manifest:
+        st.subheader("Prompt template hashes (SHA-256)")
+        st.json(manifest["prompt_hashes"])
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Main
+# ─────────────────────────────────────────────────────────────────────────────
 
 def main() -> None:
-    df = get_data()
-    filtered = sidebar_filters(df)
-
     st.title("Dashboard de resultados experimentais")
-    st.caption("Análise principal baseada em execuções por função (modelo × estratégia × função).")
+    st.caption(
+        "Toda métrica aqui vem de analysis/experiment_analysis.py -- nenhum cálculo é "
+        "reimplementado neste arquivo."
+    )
+
+    df = get_results()
+    filtered, selected_run = sidebar_filters(df)
 
     if filtered.empty:
         st.warning("Nenhum dado corresponde aos filtros selecionados.")
         return
 
-    total_rows = len(filtered)
-    eligible = filtered[filtered["analysis_eligible"]].copy()
-    if eligible.empty:
-        st.warning("Nenhuma observa\u00e7\u00e3o eleg\u00edvel para a an\u00e1lise principal.")
-        return
-    mean_tests = eligible["total_tests"].mean() if "total_tests" in eligible.columns else 0
-    mean_coverage = eligible["fn_functions_pct"].mean() if "fn_functions_pct" in eligible.columns else 0
-    success_rate = (
-        filtered["jest_success"].mean() * 100 if "jest_success" in filtered.columns else 0
-    )
+    errors_raw = get_errors_raw()
+    if not errors_raw.empty and selected_run and "run_id" in errors_raw.columns:
+        errors_raw = errors_raw[errors_raw["run_id"] == selected_run]
+    errors = ea.build_reclassified_error_events(errors_raw)
+    if not errors.empty:
+        if "model" in filtered.columns:
+            errors = errors[errors["model"].isin(filtered["model"].unique())]
+        if "strategy" in filtered.columns:
+            errors = errors[errors["strategy"].isin(filtered["strategy"].unique())]
 
-    mean_tokens = filtered["tokens"].mean() if "tokens" in filtered.columns else 0
-    mean_duration_ms = (
-        (filtered["duration_ns"].mean() / 1_000_000) if "duration_ns" in filtered.columns else 0
-    )
+    mutation = get_mutation()
+    if not mutation.empty:
+        if "model" in filtered.columns:
+            mutation = mutation[mutation["model"].isin(filtered["model"].unique())]
+        if "strategy" in filtered.columns:
+            mutation = mutation[mutation["strategy"].isin(filtered["strategy"].unique())]
 
-    col1, col2, col3, col4, col5 = st.columns(5)
-    col1.metric("Observações", f"{total_rows}")
-    col2.metric("Média total_tests", f"{mean_tests:.2f}")
-    col3.metric("Cobertura média", f"{mean_coverage:.2f}%")
-    col4.metric("Sucesso do Jest", f"{success_rate:.1f}%")
-    col5.metric("Tokens médios", f"{mean_tokens:.0f}")
+    smell = get_smell()
+    if not smell.empty:
+        if "model" in filtered.columns:
+            smell = smell[smell["model"].isin(filtered["model"].unique())]
+        if "strategy" in filtered.columns:
+            smell = smell[smell["strategy"].isin(filtered["strategy"].unique())]
 
-    summary = (
-        eligible.groupby(["model", "strategy"], dropna=False)
-        .agg(
-            functions=("function", "nunique"),
-            mean_total_tests=("total_tests", "mean"),
-            mean_coverage=("fn_functions_pct", "mean"),
-            mean_tokens=("tokens", "mean"),
-            mean_duration_ms=("duration_ns", "mean"),
-            mean_runtime_repairs=("runtime_repairs", "mean"),
-        )
-        .reset_index()
-    )
-    success_rates = (
-        filtered.groupby(["model", "strategy"], dropna=False)
-        .agg(jest_success_rate=("jest_success", "mean"))
-        .reset_index()
-    )
-    summary = summary.merge(success_rates, on=["model", "strategy"], how="left")
-    summary["mean_total_tests"] = summary["mean_total_tests"].round(2)
-    summary["mean_coverage"] = summary["mean_coverage"].round(2)
-    summary["jest_success_rate"] = (summary["jest_success_rate"] * 100).round(2)
-    summary["mean_tokens"] = summary["mean_tokens"].round(0)
-    summary["mean_duration_ms"] = (summary["mean_duration_ms"] / 1_000_000).round(2)
-    summary["mean_runtime_repairs"] = summary["mean_runtime_repairs"].round(2)
-
-    if "model" in summary.columns:
-        model_summary = (
-            summary.groupby("model", dropna=False)
-            .agg(
-                mean_total_tests=("mean_total_tests", "mean"),
-                mean_coverage=("mean_coverage", "mean"),
-                jest_success_rate=("jest_success_rate", "mean"),
-                mean_tokens=("mean_tokens", "mean"),
-                mean_duration_ms=("mean_duration_ms", "mean"),
-                mean_runtime_repairs=("mean_runtime_repairs", "mean"),
-            )
-            .reset_index()
-        )
-        if not model_summary.empty:
-            model_summary["quality_score"] = (
-                0.45 * model_summary["jest_success_rate"]
-                + 0.35 * model_summary["mean_coverage"]
-                + 0.20 * model_summary["mean_total_tests"]
-            )
-            model_summary["cost_penalty"] = (
-                0.35 * model_summary["mean_duration_ms"]
-                + 0.15 * model_summary["mean_tokens"] / 1000
-            )
-            model_summary["overall_rank_score"] = (
-                model_summary["quality_score"] - model_summary["cost_penalty"]
-            )
-            model_summary = model_summary.sort_values("overall_rank_score", ascending=False).reset_index(drop=True)
-
-    chart_col1, chart_col2 = st.columns(2)
-    with chart_col1:
-        st.subheader("Média de testes por modelo e estratégia")
-        st.bar_chart(summary.pivot(index="model", columns="strategy", values="mean_total_tests").fillna(0))
-
-    with chart_col2:
-        st.subheader("Taxa de sucesso do Jest")
-        st.bar_chart(summary.pivot(index="model", columns="strategy", values="jest_success_rate").fillna(0))
-
-    chart_col3, chart_col4 = st.columns(2)
-    with chart_col3:
-        st.subheader("Tokens médios por modelo e estratégia")
-        st.bar_chart(summary.pivot(index="model", columns="strategy", values="mean_tokens").fillna(0))
-
-    with chart_col4:
-        st.subheader("Tempo médio de geração (ms)")
-        st.bar_chart(summary.pivot(index="model", columns="strategy", values="mean_duration_ms").fillna(0))
-
-    if "runtime_repairs" in filtered.columns:
-        repair_summary = (
-            filtered.groupby(["model", "strategy"], dropna=False)
-            .agg(mean_runtime_repairs=("runtime_repairs", "mean"), total_runtime_repairs=("runtime_repairs", "sum"))
-            .reset_index()
-        )
-        st.subheader("Retentativas de reparo por modelo e estratégia")
-        st.bar_chart(repair_summary.pivot(index="model", columns="strategy", values="total_runtime_repairs").fillna(0))
-
-    if "model" in summary.columns and "model_summary" in locals():
-        st.subheader("Ranking geral do melhor modelo")
-        st.dataframe(model_summary[["model", "jest_success_rate", "mean_coverage", "mean_total_tests", "mean_duration_ms", "mean_tokens", "overall_rank_score"]], use_container_width=True)
-
-    if "model" in summary.columns and "model_summary" in locals():
-        tradeoff_df = model_summary[["model", "mean_duration_ms", "mean_runtime_repairs", "jest_success_rate"]].copy()
-        st.subheader("Trade-off: retentativas × tempo × qualidade")
-        st.scatter_chart(
-            tradeoff_df,
-            x="mean_duration_ms",
-            y="mean_runtime_repairs",
-            color="model",
-        )
-
-    strategy_summary = (
-        summary.groupby("strategy", dropna=False)
-        .agg(
-            mean_total_tests=("mean_total_tests", "mean"),
-            mean_coverage=("mean_coverage", "mean"),
-            jest_success_rate=("jest_success_rate", "mean"),
-            mean_runtime_repairs=("mean_runtime_repairs", "mean"),
-            mean_tokens=("mean_tokens", "mean"),
-        )
-        .reset_index()
-    )
-    if not strategy_summary.empty:
-        strategy_summary["quality_score"] = (
-            0.45 * strategy_summary["jest_success_rate"]
-            + 0.35 * strategy_summary["mean_coverage"]
-            + 0.20 * strategy_summary["mean_total_tests"]
-        )
-        strategy_summary["cost_penalty"] = (
-            0.35 * strategy_summary["mean_runtime_repairs"]
-            + 0.15 * strategy_summary["mean_tokens"] / 1000
-        )
-        strategy_summary["strategy_rank_score"] = (
-            strategy_summary["quality_score"] - strategy_summary["cost_penalty"]
-        )
-        strategy_summary = strategy_summary.sort_values("strategy_rank_score", ascending=False).reset_index(drop=True)
-
-        st.subheader("Ranking da melhor estratégia de prompt")
-        st.dataframe(
-            strategy_summary[["strategy", "jest_success_rate", "mean_coverage", "mean_total_tests", "mean_runtime_repairs", "mean_tokens", "strategy_rank_score"]],
-            use_container_width=True,
-        )
-
-    mutation_df = get_mutation_data()
-    if not mutation_df.empty:
-        mutation_summary = (
-            mutation_df.groupby(["model", "strategy"], dropna=False)
-            .agg(mutation_score=("mutation_score", "mean"), mutants_total=("mutants_total", "sum"))
-            .reset_index()
-        )
-        st.subheader("Mutation score por modelo e estratégia")
-        st.bar_chart(mutation_summary.pivot(index="model", columns="strategy", values="mutation_score").fillna(0))
-
-    if {"ccm", "total_tests"}.issubset(filtered.columns):
-        st.subheader("Relação entre CCM e quantidade de testes")
-        scatter_df = filtered[["model", "strategy", "ccm", "total_tests"]].dropna()
-        st.scatter_chart(scatter_df, x="ccm", y="total_tests", color="strategy")
-
-    st.subheader("Tabela resumida")
-    st.dataframe(summary, use_container_width=True)
-
-    st.subheader("Detalhes por função")
-    detail_cols = [
-        "model",
-        "strategy",
-        "module",
-        "function",
-        "ccm",
-        "total_tests",
-        "passed_tests",
-        "failed_tests",
-        "tokens",
-        "duration_ns",
-        "runtime_repairs",
-        "fn_functions_pct",
-        "jest_success",
-    ]
-    details = filtered[detail_cols].copy()
-    if "fn_functions_pct" in details.columns:
-        details["fn_functions_pct"] = details["fn_functions_pct"].round(2)
-    if "duration_ns" in details.columns:
-        details["duration_ns"] = (details["duration_ns"] / 1_000_000).round(2)
-    st.dataframe(details, use_container_width=True)
+    tabs = st.tabs([
+        "Overview", "Model comparison", "Strategy comparison", "Complexity analysis",
+        "Function explorer", "Errors and repairs", "Mutation analysis", "Test smells",
+        "Experiment provenance",
+    ])
+    with tabs[0]:
+        section_overview(filtered)
+    with tabs[1]:
+        section_model_comparison(filtered)
+    with tabs[2]:
+        section_strategy_comparison(filtered)
+    with tabs[3]:
+        section_complexity(filtered, smell)
+    with tabs[4]:
+        section_function_explorer(filtered)
+    with tabs[5]:
+        section_errors_and_repairs(errors)
+    with tabs[6]:
+        section_mutation(mutation)
+    with tabs[7]:
+        section_smells(smell)
+    with tabs[8]:
+        section_provenance(selected_run)
 
 
 if __name__ == "__main__":

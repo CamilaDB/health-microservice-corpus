@@ -42,6 +42,40 @@ Therefore, the project distinguishes between:
 - test discovery failure
 - TypeScript or syntax failure
 
+## Error-event log (observability)
+
+Alongside `results.csv`, the runner writes `experiments/metrics/error_events.csv` — an append-only **event log**, not a function-level result. Where `results.csv` holds exactly one row per (model, strategy, function) observation, `error_events.csv` holds one row per *meaningful error or recovery event* observed while producing that observation: an empty/invalid generation, a TypeScript diagnostic, a failing Jest assertion, a repair attempt that didn't apply, a rollback. A single function observation can therefore have zero rows (nothing went wrong) or many (one per failed attempt, one per repair outcome, one for a final rollback, etc.).
+
+This is supplementary diagnostic evidence about *why* things failed, not a primary outcome metric — it does not participate in `generation_success`, `jest_success`, `analysis_eligible`, or any success-rate calculation, and a failure to write to it can never affect `results.csv` (see below).
+
+### Event phases
+
+Each row is tagged with the pipeline stage it occurred in:
+
+- `generation` — model call / output validation, before anything is appended to the spec
+- `typescript` — `tsc`/ts-jest compilation diagnostics
+- `jest` — a Jest test run that failed (assertion, runtime error, timeout, crash, or discovery failure)
+- `repair` — the repair mechanism's own outcome (couldn't parse a failure to repair, a repair attempt didn't produce a valid fix, or the repair budget was exhausted) — distinct from the underlying `jest`/`typescript` failure that triggered the repair attempt
+- `pipeline` — outside any of the above: an unhandled exception, a rollback to the last known-good snapshot, or a rejected repair that would have corrupted a previously accepted function's wrapper
+
+A **primary failure** (e.g. a Jest assertion failure) and a **subsequent recovery action** (e.g. the rollback that follows it) are always recorded as separate rows, never merged into one.
+
+### Error taxonomy
+
+Classification is fully deterministic — string/regex matching over already-computed pipeline state (exit codes, stdout/stderr, parsed Jest failures), never a model call. It reuses the pipeline's own existing signals wherever one exists (the `total_tests == -1` test-discovery-failure sentinel described above, `repair.parser.categorize_jest_error`'s failure typing) rather than re-deriving them. See `runner/utils/error_classification.py` for the exact category/subcategory taxonomy and the mapping from existing pipeline signals; cases with insufficient evidence fall back to `unknown` rather than being forced into a specific bucket.
+
+### Raw diagnostics
+
+`error_events.csv` never stores large stderr/stdout blobs. `error_message` is a short, truncated summary; a deterministic `error_hash` (SHA-256 of a normalized error string) identifies the underlying error for grouping and future reclassification; and when the original diagnostic text is large, the full, untruncated text is written once to `experiments/logs/errors/<run_id>/<error_hash>.txt`, referenced from the CSV by `raw_artifact_path`.
+
+### Isolation from results.csv
+
+`error_events.csv` uses none of `results.csv`'s upsert identity or matching logic — every call is a plain append, isolated by `run_id`, and a persistence failure while writing an error event is caught and logged, never raised, so it can never delete, corrupt, or block a `results.csv` write.
+
+### Analysis
+
+`analysis/experiment_analysis.py` summarizes the log by model, strategy, model × strategy, phase, and error category/subcategory, and ranks the most common failure modes per model × strategy (`top_failure_modes.csv`) — see `experiments/README.md` for the two rate denominators used and why raw event counts are not compared directly.
+
 ## Summary
 
-The research design is centered on function-level evidence, with service-level and global-level results used as supplemental diagnostics rather than primary findings.
+The research design is centered on function-level evidence, with service-level and global-level results used as supplemental diagnostics rather than primary findings. The error-event log adds a third, even more granular diagnostic layer beneath that — useful for understanding *why* a model/strategy failed, never for measuring *whether* it succeeded.

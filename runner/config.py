@@ -34,6 +34,10 @@ GLOBAL_RESULTS_CSV = METRICS_DIR / "metrics_results.csv"
 MUTATION_RESULTS_CSV = METRICS_DIR / "mutation_results.csv"
 SMELL_RESULTS_CSV    = METRICS_DIR / "smell_results.csv"
 
+ERROR_EVENTS_CSV = METRICS_DIR / "error_events.csv"
+ERROR_ARTIFACTS_DIR = LOGS_DIR / "errors"
+ERROR_EVENT_SCHEMA_VERSION = "1.0"
+
 OLLAMA_URL = os.getenv("OLLAMA_URL")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
@@ -41,10 +45,6 @@ OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 TEMPERATURE = float(os.getenv("TEMPERATURE", '0.2'))
 MAX_TOKENS = int(os.getenv("MAX_TOKENS", '8192'))
 
-# A run identifier is intentionally process-configurable.  Post-processing
-# commands (smell/mutation) must be invoked with the same EXPERIMENT_RUN_ID as
-# the generation run so their observations remain joinable without mixing
-# repeated experiments.
 RUN_ID = os.getenv(
     "EXPERIMENT_RUN_ID",
     datetime.now(timezone.utc).strftime("run-%Y%m%dT%H%M%S.%fZ"),

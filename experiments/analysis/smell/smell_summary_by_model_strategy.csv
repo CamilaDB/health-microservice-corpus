@@ -1,0 +1,10 @@
+model,strategy,functions,measurable_functions,unmeasurable_functions,avg_it_active,avg_assertion_roulette_count,avg_empty_test_count,assertion_roulette_rate,empty_test_rate
+gemma_4,few_shot,25,25,0,3.56,2.48,0.0,84.89,0.0
+gemma_4,structured,23,22,1,4.27,3.73,0.0,93.81,0.0
+gemma_4,zero_shot,22,15,7,2.4,2.13,0.0,89.33,0.0
+qwen_coder_3b,few_shot,22,20,2,2.3,1.2,0.0,46.25,0.0
+qwen_coder_3b,structured,22,18,4,2.89,0.44,0.0,14.81,0.0
+qwen_coder_3b,zero_shot,15,8,7,1.75,0.25,0.0,25.0,0.0
+qwen_coder_7b,few_shot,24,24,0,2.96,1.08,0.0,37.5,0.0
+qwen_coder_7b,structured,24,23,1,3.3,1.0,0.0,39.85,0.0
+qwen_coder_7b,zero_shot,24,24,0,2.92,1.71,0.0,67.94,0.0

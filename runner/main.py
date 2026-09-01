@@ -12,6 +12,7 @@ from corpus_provenance import corpus_fingerprint
 from config import (
     BOOTSTRAP_DIR,
     CORPUS_DIR,
+    ERROR_EVENT_SCHEMA_VERSION,
     MAX_RUNTIME_REPAIRS,
     MAX_TS_REPAIRS,
     MODELS,
@@ -43,12 +44,28 @@ from metrics.coverage import (
     extract_test_metrics,
 )
 from persistence.csv_writer import save_result, save_service_result, save_global_result
+from persistence.error_events import record_error_event
 from prompts.builder import build_prompt, build_repair_prompt
 from prompts.loader import load_functions, load_prompt_template, load_system_prompt
+from models.error_event import EventContext
 from models.runtime_repair_result import RuntimeRepairResult
 from models.method_generated_context import MethodGenerationContext
 from models.function_definition import FunctionDefinition
 from repair.orchestrator import repair_runtime_failure, RepairStats, skip_failed_tests_for_function
+from repair.parser import parse_jest_failures
+from utils.error_classification import (
+    classify_generation_empty,
+    classify_generation_invalid,
+    classify_generation_exception,
+    classify_typescript_failure,
+    classify_jest_failure,
+    classify_repair_unparseable,
+    classify_repair_failed,
+    classify_repair_max_exceeded,
+    classify_pipeline_exception,
+    classify_pipeline_rollback,
+    classify_pipeline_artifact_corruption,
+)
 from utils.logging import logger
 
 
@@ -160,6 +177,7 @@ def write_run_manifest(functions: list[FunctionDefinition]) -> None:
         ],
         "corpus_provenance": corpus_fingerprint(CORPUS_DIR),
         "prompt_hashes": prompt_hashes,
+        "error_event_schema_version": ERROR_EVENT_SCHEMA_VERSION,
     }
     (RUNS_DIR / f"{RUN_ID}.json").write_text(
         json.dumps(manifest, indent=2, sort_keys=True), encoding="utf-8"
@@ -194,6 +212,7 @@ def validate_and_repair_typescript(
     generated_spec_path: Path,
     test_output_file: str,
     protected_spec_path: Path,
+    event_ctx: EventContext | None = None,
 ) -> bool:
     protected_blocks = function_wrapper_blocks(
         protected_spec_path.read_text(encoding="utf-8")
@@ -220,6 +239,19 @@ def validate_and_repair_typescript(
             f"RETURN CODE: {validation.returncode}"
         )
 
+        # tsc writes diagnostics to stdout; prefer it, fall back to stderr.
+        diagnostic_text = validation.stdout.strip() or validation.stderr.strip()
+        ts_category, ts_subcategory = classify_typescript_failure(diagnostic_text)
+        record_error_event(
+            event_ctx,
+            phase="typescript",
+            error_category=ts_category,
+            error_subcategory=ts_subcategory,
+            error_message=diagnostic_text[:500],
+            attempt=ts_attempt,
+            raw_text=f"STDOUT:\n{validation.stdout}\n\nSTDERR:\n{validation.stderr}",
+        )
+
         current_spec = generated_spec_path.read_text(encoding="utf-8")
         repair_prompt = build_repair_prompt(
             spec_content=current_spec,
@@ -241,10 +273,31 @@ def validate_and_repair_typescript(
                 "Rejecting TypeScript repair because it modified previously "
                 f"accepted function wrappers: {', '.join(changed)}"
             )
+            corruption_category, corruption_subcategory = classify_pipeline_artifact_corruption()
+            record_error_event(
+                event_ctx,
+                phase="pipeline",
+                error_category=corruption_category,
+                error_subcategory=corruption_subcategory,
+                error_message=(
+                    "TypeScript repair modified previously accepted function "
+                    f"wrappers: {', '.join(changed)}"
+                ),
+                attempt=ts_attempt,
+            )
             return False
         generated_spec_path.write_text(repaired, encoding="utf-8")
 
     logger.error("TypeScript validation failed permanently")
+    ts_exhausted_category, ts_exhausted_subcategory = classify_repair_max_exceeded()
+    record_error_event(
+        event_ctx,
+        phase="repair",
+        error_category=ts_exhausted_category,
+        error_subcategory=ts_exhausted_subcategory,
+        error_message=f"TypeScript repair exhausted MAX_TS_REPAIRS={MAX_TS_REPAIRS} attempts",
+        attempt=MAX_TS_REPAIRS,
+    )
     return False
 
 
@@ -265,6 +318,7 @@ def run_runtime_repair_loop(
     fn_id: str,
     line_start: int,
     line_end: int,
+    event_ctx: EventContext | None = None,
 ) -> RuntimeRepairResult:
     """
     Runs Jest scoped to fn_id (--testNamePattern), collects per-function
@@ -315,6 +369,16 @@ def run_runtime_repair_loop(
 
             if is_typescript_error(jest_result.stderr):
                 logger.error("Runtime loop received TypeScript error")
+                ts_category, ts_subcategory = classify_typescript_failure(jest_result.stderr)
+                record_error_event(
+                    event_ctx,
+                    phase="typescript",
+                    error_category=ts_category,
+                    error_subcategory=ts_subcategory,
+                    error_message=jest_result.stderr[:500],
+                    attempt=attempt,
+                    raw_text=jest_result.stderr,
+                )
                 return RuntimeRepairResult(
                     success=False,
                     requires_typescript_repair=True,
@@ -330,9 +394,65 @@ def run_runtime_repair_loop(
             if jest_result.success:
                 break
 
+            # ── Primary failure events (jest phase) ─────────────────────
+            # One event per attributable failing test; a single fallback
+            # event when Jest failed but no individual test could be
+            # attributed (e.g. a crash before any assertion ran).
+            test_discovery_failed = test_metrics.get("total_tests") == -1
+            failures = parse_jest_failures(jest_result.stderr)
+            if failures:
+                for failure in failures:
+                    jest_category, jest_subcategory = classify_jest_failure(
+                        test_discovery_failed=test_discovery_failed,
+                        error_type=failure.error_type,
+                        raw_text=jest_result.stderr,
+                    )
+                    record_error_event(
+                        event_ctx,
+                        phase="jest",
+                        error_category=jest_category,
+                        error_subcategory=jest_subcategory,
+                        error_message=f"{failure.test_name}: {failure.error_message}",
+                        attempt=attempt,
+                        raw_text=jest_result.stderr,
+                    )
+            else:
+                jest_category, jest_subcategory = classify_jest_failure(
+                    test_discovery_failed=test_discovery_failed,
+                    error_type=None,
+                    raw_text=jest_result.stderr,
+                )
+                record_error_event(
+                    event_ctx,
+                    phase="jest",
+                    error_category=jest_category,
+                    error_subcategory=jest_subcategory,
+                    error_message=(jest_result.stderr or "")[:500],
+                    attempt=attempt,
+                    raw_text=jest_result.stderr,
+                )
+
             if attempt < MAX_RUNTIME_REPAIRS:
                 runtime_repairs += 1
                 logger.info(f"Runtime repair attempt={attempt}")
+
+                # ── Recovery-action classification (repair phase) ───────
+                # A separate event from the primary jest-phase failure(s)
+                # above: this describes whether the repair mechanism itself
+                # could act on the failure, not the failure itself.
+                if not failures:
+                    unparseable_category, unparseable_subcategory = classify_repair_unparseable()
+                    record_error_event(
+                        event_ctx,
+                        phase="repair",
+                        error_category=unparseable_category,
+                        error_subcategory=unparseable_subcategory,
+                        error_message=(
+                            "0 failures parsed from Jest output; whole-file "
+                            "repair is disabled for this attempt."
+                        ),
+                        attempt=attempt,
+                    )
 
                 repair_stats = repair_runtime_failure(
                     runtime_repairs=runtime_repairs,
@@ -357,9 +477,34 @@ def run_runtime_repair_loop(
                     f"tokens={repair_stats.repair_tokens}"
                 )
 
+                if failures and repair_stats.repairs_applied == 0 and repair_stats.repairs_failed > 0:
+                    failed_category, failed_subcategory = classify_repair_failed()
+                    record_error_event(
+                        event_ctx,
+                        phase="repair",
+                        error_category=failed_category,
+                        error_subcategory=failed_subcategory,
+                        error_message=(
+                            f"{repair_stats.repairs_failed} repair attempt(s) "
+                            "did not produce a valid fix"
+                        ),
+                        attempt=attempt,
+                    )
+
         finally:
             logger.info(f"Removing temp spec {temp_spec_path}")
             remove_temp_spec(temp_spec_path)
+
+    if jest_result is not None and not jest_result.success:
+        exhausted_category, exhausted_subcategory = classify_repair_max_exceeded()
+        record_error_event(
+            event_ctx,
+            phase="repair",
+            error_category=exhausted_category,
+            error_subcategory=exhausted_subcategory,
+            error_message=f"Runtime repair exhausted MAX_RUNTIME_REPAIRS={MAX_RUNTIME_REPAIRS} attempts",
+            attempt=MAX_RUNTIME_REPAIRS,
+        )
 
     return RuntimeRepairResult(
         success=jest_result.success if jest_result else False,
@@ -467,6 +612,21 @@ def run_experiment() -> None:
                         # Deterministic wrapper identifier for this function
                         fn_id = make_fn_id(function_data.name)
 
+                        # Identity for error-event logging only -- read-only,
+                        # never influences generation/repair/result behavior.
+                        event_ctx = EventContext(
+                            run_id=RUN_ID,
+                            model=model_key,
+                            strategy=strategy,
+                            module=function_data.module,
+                            function_name=function_data.name,
+                            fn_id=fn_id,
+                            source_file=source_file,
+                            line_start=function_data.line,
+                            line_end=function_data.end_line,
+                            source_hash=function_data.source_hash,
+                        )
+
                         try:
                             # ──────────────────────────────────────────────────
                             # STEP 2 — BUILD PROMPT
@@ -486,9 +646,24 @@ def run_experiment() -> None:
                             # ──────────────────────────────────────────────────
                             # STEP 3 — GENERATE
                             # ──────────────────────────────────────────────────
-                            response = client.generate(
-                                incremental_system_prompt, prompt
-                            )
+                            try:
+                                response = client.generate(
+                                    incremental_system_prompt, prompt
+                                )
+                            except Exception as gen_exc:
+                                # Logged at the finer generation-phase
+                                # granularity, then re-raised unchanged so
+                                # the outer except below still handles it
+                                # exactly as before (runner_exception).
+                                gen_category, gen_subcategory = classify_generation_exception()
+                                record_error_event(
+                                    event_ctx,
+                                    phase="generation",
+                                    error_category=gen_category,
+                                    error_subcategory=gen_subcategory,
+                                    error_message=str(gen_exc)[:500],
+                                )
+                                raise
 
                             logger.debug(
                                 f"build prompt response in "
@@ -521,6 +696,14 @@ def run_experiment() -> None:
                                     "execution_status":   "generation_empty",
                                     "error":              "test_block_is_empty",
                                 }
+                                empty_category, empty_subcategory = classify_generation_empty()
+                                record_error_event(
+                                    event_ctx,
+                                    phase="generation",
+                                    error_category=empty_category,
+                                    error_subcategory=empty_subcategory,
+                                    error_message="test_block_is_empty",
+                                )
                                 save_result(result_row)
                                 _update_function_aggregate(
                                     strategy_aggregates[(model_key, strategy)],
@@ -556,6 +739,15 @@ def run_experiment() -> None:
                                     "execution_status":   "generation_invalid",
                                     "error":              "invalid_block",
                                 }
+                                invalid_category, invalid_subcategory = classify_generation_invalid()
+                                record_error_event(
+                                    event_ctx,
+                                    phase="generation",
+                                    error_category=invalid_category,
+                                    error_subcategory=invalid_subcategory,
+                                    error_message="invalid_block: forbidden pattern or unclosed scopes",
+                                    raw_text=test_block,
+                                )
                                 save_result(result_row)
                                 _update_function_aggregate(
                                     strategy_aggregates[(model_key, strategy)],
@@ -597,6 +789,7 @@ def run_experiment() -> None:
                                 fn_id=fn_id,
                                 line_start=function_data.line,
                                 line_end=function_data.end_line,
+                                event_ctx=event_ctx,
                             )
 
                             # ──────────────────────────────────────────────────
@@ -610,6 +803,7 @@ def run_experiment() -> None:
                                     generated_spec_path=generated_spec_path,
                                     test_output_file=test_output_file,
                                     protected_spec_path=backup_path,
+                                    event_ctx=event_ctx,
                                 )
 
                                 if ts_success:
@@ -624,6 +818,7 @@ def run_experiment() -> None:
                                         fn_id=fn_id,
                                         line_start=function_data.line,
                                         line_end=function_data.end_line,
+                                        event_ctx=event_ctx,
                                     )
                                 else:
                                     ts_repair_failed = True
@@ -662,6 +857,23 @@ def run_experiment() -> None:
                                     generated_spec_path.write_text(
                                         backup_path.read_text(encoding="utf-8"),
                                         encoding="utf-8",
+                                    )
+                                    # A distinct recovery-action event, separate
+                                    # from the primary jest/typescript failure
+                                    # event(s) already recorded above for this
+                                    # attempt.
+                                    rollback_category, rollback_subcategory = classify_pipeline_rollback()
+                                    record_error_event(
+                                        event_ctx,
+                                        phase="pipeline",
+                                        error_category=rollback_category,
+                                        error_subcategory=rollback_subcategory,
+                                        error_message=(
+                                            f"Function '{function_data.name}' failed "
+                                            "irrecoverably; rolled back to the last "
+                                            "known-good snapshot."
+                                        ),
+                                        artifact_disposition=artifact_disposition,
                                     )
 
                             # ──────────────────────────────────────────────────
@@ -737,6 +949,14 @@ def run_experiment() -> None:
                                 "execution_status": "runner_exception",
                                 "fatal_error": str(exc),
                             }
+                            exc_category, exc_subcategory = classify_pipeline_exception()
+                            record_error_event(
+                                event_ctx,
+                                phase="pipeline",
+                                error_category=exc_category,
+                                error_subcategory=exc_subcategory,
+                                error_message=str(exc)[:500],
+                            )
                             save_result(result_row)
                             _update_function_aggregate(
                                 strategy_aggregates[(model_key, strategy)],
@@ -849,6 +1069,25 @@ def run_experiment() -> None:
                             "execution_status": "spec_group_fatal_error",
                             "fatal_error":      str(exc),
                         })
+                        group_exc_category, group_exc_subcategory = classify_pipeline_exception()
+                        record_error_event(
+                            EventContext(
+                                run_id=RUN_ID,
+                                model=model_key,
+                                strategy=strategy,
+                                module=function_data.module,
+                                function_name=function_data.name,
+                                fn_id=make_fn_id(function_data.name),
+                                source_file=function_data.source_file,
+                                line_start=function_data.line,
+                                line_end=function_data.end_line,
+                                source_hash=function_data.source_hash,
+                            ),
+                            phase="pipeline",
+                            error_category=group_exc_category,
+                            error_subcategory=group_exc_subcategory,
+                            error_message=str(exc)[:500],
+                        )
 
             # ──────────────────────────────────────────────────────────────────
             # STEP 9 — GLOBAL COVERAGE  (Level 3)

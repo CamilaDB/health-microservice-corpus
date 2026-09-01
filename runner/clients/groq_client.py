@@ -103,18 +103,32 @@ class GroqClient(BaseClient):
         """
         Extracts the recommended wait time from a 429 response.
 
-        Groq embeds it in the JSON error body:
-          {"error": {"message": "... retry after X.XXXs ..."}}
+        Groq embeds it in the JSON error body as a Go-style duration, e.g.:
+          {"error": {"message": "... Please try again in 7.085s ..."}}
+          {"error": {"message": "... Please try again in 18m44.928s ..."}}
+          {"error": {"message": "... Please try again in 1h2m3.4s ..."}}
+
+        Hours/minutes are only present when non-zero, so all three components
+        are optional — parse whichever are present and sum them.
 
         Falls back to exponential backoff starting at 30s if not found.
         """
         try:
             msg = response.json()["error"]["message"]
-            # "Please try again in 7.085s"
             import re
-            m = re.search(r"in\s+([\d.]+)s", msg)
-            if m:
-                return float(m.group(1)) + 2.0   # small buffer
+            # Anchor on the literal "try again in" rather than a bare "in\s+":
+            # "again" itself ends in "in", so an unanchored pattern with all
+            # groups optional could zero-width-match right there and silently
+            # report no duration found.
+            m = re.search(
+                r"try again in\s+"
+                r"(?:(\d+(?:\.\d+)?)h)?(?:(\d+(?:\.\d+)?)m)?(?:(\d+(?:\.\d+)?)s)?",
+                msg,
+            )
+            if m and any(m.groups()):
+                hours, minutes, seconds = (float(g) if g else 0.0 for g in m.groups())
+                wait = hours * 3600 + minutes * 60 + seconds
+                return wait + 2.0   # small buffer
         except Exception:
             pass
 

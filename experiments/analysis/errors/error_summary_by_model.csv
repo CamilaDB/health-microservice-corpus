@@ -1,0 +1,4 @@
+model,total_events,functions_observed,distinct_attempts_logged,events_per_function,events_per_attempt
+gemma_4,205,15,98,13.67,2.09
+qwen_coder_3b,340,25,200,13.6,1.7
+qwen_coder_7b,140,16,74,8.75,1.89

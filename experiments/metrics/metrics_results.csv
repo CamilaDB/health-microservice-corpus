@@ -1,0 +1,10 @@
+run_id,model,strategy,execution_failed,test_metrics_source,total_tests,passed_tests,failed_tests,pending_tests,functions_total,functions_generation_success,functions_jest_success,functions_jest_failed,global_statements_total,global_statements_covered,global_statements_pct,global_branches_total,global_branches_covered,global_branches_pct,global_functions_total,global_functions_covered,global_functions_pct,global_lines_total,global_lines_covered,global_lines_pct
+run-20260829T234854.260375Z,gemma_4,zero_shot,False,sum_of_valid_functions,69,36,0,33,22,22,22,0,338,137,40.53,344,98,28.48,33,19,57.57,322,125,38.81
+run-20260829T234854.260375Z,gemma_4,few_shot,False,sum_of_valid_functions,105,89,0,16,25,25,25,0,338,310,91.71,344,280,81.39,33,33,100.0,322,296,91.92
+run-20260829T234854.260375Z,gemma_4,structured,False,sum_of_valid_functions,107,94,0,13,23,23,23,0,338,265,78.4,344,245,71.22,33,31,93.93,322,255,79.19
+run-20260829T234854.260375Z,qwen_coder_3b,zero_shot,False,sum_of_valid_functions,77,14,0,63,15,15,15,0,338,110,32.54,344,70,20.34,33,15,45.45,322,101,31.36
+run-20260829T234854.260375Z,qwen_coder_3b,few_shot,False,sum_of_valid_functions,79,46,0,33,22,22,22,0,338,169,50.0,344,141,40.98,33,26,78.78,322,158,49.06
+run-20260829T234854.260375Z,qwen_coder_3b,structured,False,sum_of_valid_functions,91,52,0,39,22,22,22,0,338,178,52.66,344,132,38.37,33,26,78.78,322,166,51.55
+run-20260829T234854.260375Z,qwen_coder_7b,zero_shot,False,sum_of_valid_functions,99,70,0,29,24,24,24,0,338,221,65.38,344,196,56.97,33,28,84.84,322,212,65.83
+run-20260829T234854.260375Z,qwen_coder_7b,few_shot,False,sum_of_valid_functions,92,71,0,21,24,24,24,0,338,203,60.05,344,184,53.48,33,29,87.87,322,195,60.55
+run-20260829T234854.260375Z,qwen_coder_7b,structured,False,sum_of_valid_functions,98,76,0,22,24,24,24,0,338,244,72.18,344,214,62.2,33,29,87.87,322,234,72.67

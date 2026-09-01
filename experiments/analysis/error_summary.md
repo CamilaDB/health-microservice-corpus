@@ -1,0 +1,719 @@
+# Error event summary
+
+Supplementary diagnostic evidence about failure modes -- **not** a primary outcome metric. error_category/error_subcategory below are the Phase-3 RECLASSIFIED values (84 events reclassified away from 'unknown'); the original, unmodified classification from error_events.csv is preserved in error_category_original/error_subcategory_original. See experiments/README.md for the two rate denominators (events_per_function, events_per_attempt).
+
+## Most common failure modes by model x strategy
+
+| model | strategy | phase | error_category | error_subcategory | event_count | rank |
+| --- | --- | --- | --- | --- | --- | --- |
+| gemma_4 | few_shot | jest | jest | assertion_failure | 23 | 1 |
+| gemma_4 | few_shot | jest | jest | unknown | 17 | 2 |
+| gemma_4 | few_shot | jest | jest | runtime_error | 9 | 3 |
+| gemma_4 | few_shot | jest | jest | unexpected_throw | 3 | 4 |
+| gemma_4 | few_shot | repair | repair | repair_failed | 2 | 5 |
+| gemma_4 | structured | jest | jest | assertion_failure | 31 | 1 |
+| gemma_4 | structured | jest | jest | unknown | 23 | 2 |
+| gemma_4 | structured | jest | jest | runtime_error | 11 | 3 |
+| gemma_4 | structured | repair | repair | repair_failed | 6 | 4 |
+| gemma_4 | structured | jest | jest | unexpected_throw | 2 | 5 |
+| gemma_4 | zero_shot | jest | jest | runtime_error | 21 | 1 |
+| gemma_4 | zero_shot | jest | jest | unknown | 17 | 2 |
+| gemma_4 | zero_shot | jest | jest | test_discovery_failure | 9 | 3 |
+| gemma_4 | zero_shot | repair | repair | repair_failed | 9 | 4 |
+| gemma_4 | zero_shot | jest | jest | assertion_failure | 7 | 5 |
+| qwen_coder_3b | few_shot | jest | jest | assertion_failure | 15 | 1 |
+| qwen_coder_3b | few_shot | jest | jest | runtime_error | 12 | 2 |
+| qwen_coder_3b | few_shot | jest | jest | unexpected_throw | 12 | 3 |
+| qwen_coder_3b | few_shot | jest | jest | unknown | 11 | 4 |
+| qwen_coder_3b | few_shot | jest | jest | test_discovery_failure | 4 | 5 |
+| qwen_coder_3b | structured | jest | jest | unknown | 31 | 1 |
+| qwen_coder_3b | structured | jest | jest | runtime_error | 14 | 2 |
+| qwen_coder_3b | structured | jest | jest | unexpected_throw | 12 | 3 |
+| qwen_coder_3b | structured | repair | repair | unparseable_failure | 12 | 4 |
+| qwen_coder_3b | structured | jest | jest | test_discovery_failure | 5 | 5 |
+| qwen_coder_3b | zero_shot | jest | jest | unknown | 59 | 1 |
+| qwen_coder_3b | zero_shot | repair | repair | unparseable_failure | 40 | 2 |
+| qwen_coder_3b | zero_shot | jest | jest | runtime_error | 38 | 3 |
+| qwen_coder_3b | zero_shot | jest | jest | assertion_failure | 24 | 4 |
+| qwen_coder_3b | zero_shot | pipeline | pipeline | rollback | 10 | 5 |
+| qwen_coder_7b | few_shot | jest | jest | runtime_error | 19 | 1 |
+| qwen_coder_7b | few_shot | jest | jest | assertion_failure | 7 | 2 |
+| qwen_coder_7b | few_shot | jest | jest | unexpected_throw | 6 | 3 |
+| qwen_coder_7b | few_shot | jest | jest | test_discovery_failure | 5 | 4 |
+| qwen_coder_7b | few_shot | repair | repair | unparseable_failure | 4 | 5 |
+| qwen_coder_7b | structured | jest | jest | assertion_failure | 18 | 1 |
+| qwen_coder_7b | structured | jest | jest | runtime_error | 15 | 2 |
+| qwen_coder_7b | structured | jest | jest | unexpected_throw | 7 | 3 |
+| qwen_coder_7b | structured | jest | jest | unknown | 3 | 4 |
+| qwen_coder_7b | structured | repair | repair | repair_failed | 2 | 5 |
+| qwen_coder_7b | zero_shot | jest | jest | runtime_error | 21 | 1 |
+| qwen_coder_7b | zero_shot | jest | jest | assertion_failure | 9 | 2 |
+| qwen_coder_7b | zero_shot | jest | jest | unknown | 6 | 3 |
+| qwen_coder_7b | zero_shot | jest | jest | unexpected_throw | 5 | 4 |
+| qwen_coder_7b | zero_shot | repair | repair | unparseable_failure | 4 | 5 |
+
+## Repeated error signatures (same error_hash, >=2 occurrences)
+
+| error_hash | model | strategy | phase | error_category | error_subcategory | occurrences | distinct_functions | sample_message |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2ca322236f16007840cf7e8abfbc15162da7933dc8752f1c6a0b9c76d3d03702 | qwen_coder_3b | zero_shot | repair | repair | unparseable_failure | 40 | 10 | 0 failures parsed from Jest output; whole-file repair is disabled for this attempt. |
+| 2ca322236f16007840cf7e8abfbc15162da7933dc8752f1c6a0b9c76d3d03702 | qwen_coder_3b | structured | repair | repair | unparseable_failure | 12 | 3 | 0 failures parsed from Jest output; whole-file repair is disabled for this attempt. |
+| 07669857ffb0ce3ee50e620aaa2bdb3e306e87699a96b0b0862427652773b240 | qwen_coder_3b | zero_shot | repair | repair | max_repairs_exceeded | 10 | 10 | Runtime repair exhausted MAX_RUNTIME_REPAIRS=5 attempts |
+| ceb2c2f6e8c25984f1bf00817f1d33d0da70f6e873b13dc83bc3995c4d4a72e5 | qwen_coder_3b | zero_shot | jest | jest | assertion_failure | 10 | 1 | should throw BadRequestException if invalid status transition: Error: expect(received).rejects.toThrow(expected)
+
+Expected message: "Invalid status transition from ADMITTED to DISCHARGED"
+Received message: "Encounter with id 1 not found"
+
+    [0m [90m 102 |[39m     [36mconst[39m encounter [33m=[39m [36mawait[39m [36mthis[39m[33m.[39mencounterRepository[33m.[39mfindById(id)[33m;[39m
+     [90m 103 |[39m     [36mif[39m ([33m![39mencounter) {
+    [31m[1m>[22m[39m[90m 104  |
+| 06bd25ca66c58954ae8a552d67477269c813f97a9222bd1ff194490cd024c606 | qwen_coder_7b | structured | jest | jest | runtime_error | 9 | 1 | should return order if incoming status is CORRECTED and order status is COMPLETED: TypeError: Cannot read properties of undefined (reading 'status') |
+| 562ab0f84e4587dd49f6dd0223ca0cbe544b3588c39fa0eb2093ebf5fb72355c | qwen_coder_3b | zero_shot | jest | jest | runtime_error | 8 | 1 | should throw BadRequestException for unsupported ADT type: TypeError: expect(...).rejects.toThrowError is not a function |
+| 29a1c81041ab25c817bbf9ff8161328e67310ba95a93fdee8f4462a94197b028 | qwen_coder_3b | zero_shot | jest | jest | runtime_error | 8 | 1 | should throw BadRequestException if order is cancelled: TypeError: expect(...).rejects.toThrowError is not a function |
+| ebe81bc0cb187f1bcf4fe96cadfbc375c0e7a808d10eb1394d6c9ed6b969e4a9 | qwen_coder_7b | zero_shot | jest | jest | runtime_error | 8 | 1 | should throw BadRequestException if incoming status is CORRECTED and order is not completed: Error: expect(received).rejects.toThrow(expected)
+
+Expected constructor: BadRequestException
+Received constructor: TypeError
+
+Received message: "Cannot read properties of undefined (reading 'status')"
+
+    [0m [90m 94 |[39m     )[33m;[39m
+     [90m 95 |[39m
+    [31m[1m>[22m[39m[90m 96 |[39m     [36mif[39m (encounter[33m.[39mstatus [33m===[39m [33mEncounterStatus[39m[33m.[39m[33mDI |
+| bb03383fe244a430338f9f9a8aab8b72aa3f902ca39edd50460c54509ef4107a | gemma_4 | zero_shot | jest | jest | unknown | 8 | 1 | should throw BadRequestException if the encounter is discharged: Error: Cannot use spyOn on a primitive value; undefined given |
+| df324dfdc104ab4530a3e36a16295360722650b1076ffd76fb01bbd79f18ef38 | qwen_coder_7b | few_shot | jest | jest | runtime_error | 8 | 1 | should throw BadRequestException when incoming status is CORRECTED and order is not completed: Error: expect(received).rejects.toThrow(expected)
+
+Expected constructor: BadRequestException
+Received constructor: TypeError
+
+Received message: "Cannot read properties of undefined (reading 'status')"
+
+    [0m [90m 94 |[39m     )[33m;[39m
+     [90m 95 |[39m
+    [31m[1m>[22m[39m[90m 96 |[39m     [36mif[39m (encounter[33m.[39mstatus [33m===[39m [33mEncounterStatus[39m[33m.[39m[33m |
+| 08afafebe32727555245a1dc318790df7f13bfb318970da5e784d12f705358a7 | qwen_coder_3b | zero_shot | jest | jest | unknown | 8 | 1 | should throw BadRequestException if status is CORRECTED and dto.status is defined: Error: Nest can't resolve dependencies of the ResultService (ResultRepository, ?). Please make sure that the argument OrderService at index [1] is available in the RootTestModule module.
+
+Potential solutions:
+- Is RootTestModule a valid NestJS module?
+- If OrderService is a provider, is it part of the current RootTestModule?
+- If OrderService is exported from a separate @Module, is that module imported within Root |
+| fbb7386d4e8ba679936dcb305e974ebe8344427cf468068a3d95b56f2f44d48f | qwen_coder_3b | few_shot | jest | jest | runtime_error | 8 | 1 | should throw BadRequestException when A01 requires missing fields: Error: expect(received).rejects.toThrow(expected)
+
+Expected constructor: BadRequestException
+Received constructor: TypeError
+
+Received message: "Cannot read properties of undefined (reading 'id')"
+
+    [0m [90m 226 |[39m
+     [90m 227 |[39m       [36mconst[39m encounter [33m=[39m [36mawait[39m [36mthis[39m[33m.[39mcreateEncounter({
+    [31m[1m>[22m[39m[90m 228 |[39m         patientId[33m:[39m patient[33m. |
+| 2ca322236f16007840cf7e8abfbc15162da7933dc8752f1c6a0b9c76d3d03702 | gemma_4 | zero_shot | repair | repair | unparseable_failure | 7 | 2 | 0 failures parsed from Jest output; whole-file repair is disabled for this attempt. |
+| d549da06a6981c6ef78b16f9625a93342397fa4fe61dda30300efe2b993f959b | gemma_4 | zero_shot | jest | jest | runtime_error | 7 | 1 | should successfully transition status from ADMITTED to TRANSFERRED: TypeError: service.transitionEncounterStatus is not a function |
+| 6b7c31cc191210ad87e9d4801e86bbf3570b11e10a9f8965e504df05979cd305 | qwen_coder_7b | zero_shot | jest | jest | runtime_error | 6 | 1 | should process A01 message with all required fields: TypeError: Cannot read properties of undefined (reading 'active') |
+| abeaabb9d035f2883744de784b816312581750c5118e1c87b3f96289f050a1ab | gemma_4 | few_shot | jest | jest | assertion_failure | 6 | 1 | should throw BadRequestException for invalid status transitions: Error: expect(received).rejects.toThrow(expected)
+
+Expected constructor: BadRequestException
+Received constructor: NotFoundException
+
+Received message: "Result with id 1 not found"
+
+    [0m [90m 46 |[39m     [36mconst[39m result [33m=[39m [36mawait[39m [36mthis[39m[33m.[39mresultRepository[33m.[39mfindById(id)[33m;[39m
+     [90m 47 |[39m     [36mif[39m ([33m![39mresult) {
+    [31m[1m>[22m[39m[90m 48 |[3 |
+| 5fd0ae92957b96218300109014bc3b9c0221203ea903c3e8e4d5b036e53d98c2 | qwen_coder_3b | few_shot | jest | jest | unknown | 6 | 1 | should throw BadRequestException when ADT A01 has no wart: BadRequestException: Ward is required for ADT A01 (admission) |
+| 30c6d74737852ca7981c4a1ace64d9579b6d2c402b49cae924a38c9100dc218f | gemma_4 | structured | jest | jest | assertion_failure | 6 | 1 | should calculate encounter summary correctly based on order statuses and result statuses: Error: expect(received).toBe(expected) // Object.is equality
+
+Expected: "MEDIUM"
+Received: "HIGH" |
+| e6cd347dbb5f4939bafc7b0d296fd1e4cdfb987d0b9603ed1f945d19448cc42a | gemma_4 | structured | jest | jest | assertion_failure | 6 | 1 | should calculate encounter summary correctly based on order statuses and result statuses: Error: expect(received).toBe(expected) // Object.is equality
+
+Expected: 0
+Received: 1 |
+| 2e1508e2d0f51c9ae1e2e082900b1c9cd4c4c381b3efdae59345fe1bc62661d8 | qwen_coder_7b | structured | jest | jest | assertion_failure | 5 | 1 | should return encounter summary with correct values: Error: expect(received).toBe(expected) // Object.is equality
+
+Expected: 14
+Received: 1247 |
+| 319934205af2d98ed15860dbe59f4f126244e61dfee1375e06fc98acbae230fa | gemma_4 | structured | jest | jest | unknown | 5 | 1 | should throw BadRequestException when adtType is A01 and ward is missing: BadRequestException: Ward is required for ADT A01 (admission) |
+| 462a14279a63f4c5b362c6d2acdc54cca6b6798a365850843c6f6135eb36e8e0 | qwen_coder_3b | zero_shot | jest | jest | unknown | 5 | 1 | C:\Users\cdbaz\OneDrive\Documentos\Projetos\usp\tcc\health-microservice-corpus\corpus\src\result\result.service.ts:3515
+      throw new common_1.NotFoundException(`Result with id ${id} not found`);
+            ^
+
+[NotFoundException: Result with id 123 not found] {
+  response: {
+    message: 'Result with id 123 not found',
+    error: 'Not Found',
+    statusCode: 404
+  },
+  status: 404,
+  options: {}
+}
+
+Node.js v18.16.0 |
+| 49342f366b50d129c1b740a4d7c77b803ab5ee92c4d89f19e9a61ee4c5b0cba3 | qwen_coder_3b | few_shot | jest | jest | assertion_failure | 5 | 1 | should update result value and save it: Error: expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+- Expected
++ Received
+
+  Object {
+    "id": "1",
++   "status": "PRELIMINARY",
+    "value": 10,
+  },
+
+Number of calls: 1 |
+| 1b6fbc2db79b7a065a6624b95d8157e78aa3ee21b00b9038f50199840abfef82 | qwen_coder_3b | zero_shot | jest | jest | unknown | 5 | 1 | C:\Users\cdbaz\OneDrive\Documentos\Projetos\usp\tcc\health-microservice-corpus\corpus\src\patient\patient.service.ts:1964
+      throw new common_1.ConflictException(`CPF ${dto.cpf} already registered`);
+            ^
+
+[ConflictException: CPF 12345678901 already registered] {
+  response: {
+    message: 'CPF 12345678901 already registered',
+    error: 'Conflict',
+    statusCode: 409
+  },
+  status: 409,
+  options: {}
+}
+
+Node.js v18.16.0 |
+| 0d4b6d1596fb29689aa858a94bf362576501f06773c7791a3f725d0ed2c0dd1c | qwen_coder_3b | zero_shot | jest | jest | unknown | 5 | 1 | C:\Users\cdbaz\OneDrive\Documentos\Projetos\usp\tcc\health-microservice-corpus\corpus\src\order\order.service.ts:2963
+      throw new common_1.NotFoundException(`Order with id ${id} not found`);
+            ^
+
+[NotFoundException: Order with id 123 not found] {
+  response: {
+    message: 'Order with id 123 not found',
+    error: 'Not Found',
+    statusCode: 404
+  },
+  status: 404,
+  options: {}
+}
+
+Node.js v18.16.0 |
+| 1575932f5460d0ecdc5f4a07df49f0323308555199fe99564efd87cf3d0b1e3b | qwen_coder_3b | structured | jest | jest | unknown | 5 | 1 | C:\Users\cdbaz\OneDrive\Documentos\Projetos\usp\tcc\health-microservice-corpus\corpus\src\order\order.service.spec.ts:129
+                orderRepositoryMock.search.mockRejectedValue(new Error('Invalid status'));
+                                                             ^
+
+[Error: Invalid status]
+
+Node.js v18.16.0 |
+| 1a45a045f51f23945edac5fe305bab5a0abacd2978cdd379cf140f663a75d335 | qwen_coder_3b | structured | jest | jest | unknown | 5 | 1 | should throw BadRequestException for ADT A01 with no Wart: BadRequestException: Ward is required for ADT A01 (admission) |
+| daf15dc450430e10dc67dcb46d60659dc3fc19c29f1fd399abf8ffe04c483376 | qwen_coder_3b | zero_shot | jest | jest | unknown | 5 | 1 | C:\Users\cdbaz\OneDrive\Documentos\Projetos\usp\tcc\health-microservice-corpus\corpus\src\encounter\encounter.service.ts:5655
+      throw new common_1.NotFoundException(`Encounter with id ${id} not found`);
+            ^
+
+[NotFoundException: Encounter with id 123 not found] {
+  response: {
+    message: 'Encounter with id 123 not found',
+    error: 'Not Found',
+    statusCode: 404
+  },
+  status: 404,
+  options: {}
+}
+
+Node.js v18.16.0 |
+| b056a92f5ac2fbb8a3110c911c4f8ff321ca1cb3c297df635a5de90c526a2c84 | qwen_coder_7b | few_shot | jest | jest | runtime_error | 5 | 1 | should throw BadRequestException when incoming status is CORRECTED and order is not completed: Error: expect(received).rejects.toThrow(expected)
+
+Expected constructor: BadRequestException
+Received constructor: TypeError
+
+Received message: "Cannot read properties of undefined (reading 'status')"
+
+    [0m [90m 94 |[39m     )[33m;[39m
+     [90m 95 |[39m
+    [31m[1m>[22m[39m[90m 96 |[39m     [36mif[39m (encounter[33m.[39mstatus [33m===[39m [33mEncounterStatus[39m[33m.[39m[33m |
+| a7a832a3fdf79e5ac7ac85fbe98350719e83c1b4fabce82da33b6c76342f14b2 | gemma_4 | structured | jest | jest | runtime_error | 5 | 1 | should handle ADT type A01 successfully by creating a new patient and encounter: ReferenceError: createEncounter is not defined |
+| b39c1af044098cfecfa85a9eca8f6367ede90385a9101e146722f5f848125fa4 | qwen_coder_3b | structured | jest | jest | unknown | 5 | 1 | C:\Users\cdbaz\OneDrive\Documentos\Projetos\usp\tcc\health-microservice-corpus\corpus\src\encounter\encounter.service.ts:5499
+      throw new common_1.BadRequestException('Only ADT A01 can create an encounter; use the ADT workflow for A02, A03 and A08');
+            ^
+
+[BadRequestException: Only ADT A01 can create an encounter; use the ADT workflow for A02, A03 and A08] {
+  response: {
+    message: 'Only ADT A01 can create an encounter; use the ADT workflow for A02, A03 and A08',
+    error: 'Bad |
+| 74b34ff7f3285fad1bcbe32400b2b6f77cf5c67a287bb061ad95cdb8ed427d4c | qwen_coder_3b | zero_shot | jest | jest | unknown | 5 | 1 | C:\Users\cdbaz\OneDrive\Documentos\Projetos\usp\tcc\health-microservice-corpus\corpus\src\order\order.service.ts:2984
+      throw new common_1.BadRequestException('Cannot create order for a discharged encounter');
+            ^
+
+[BadRequestException: Cannot create order for a discharged encounter] {
+  response: {
+    message: 'Cannot create order for a discharged encounter',
+    error: 'Bad Request',
+    statusCode: 400
+  },
+  status: 400,
+  options: {}
+}
+
+Node.js v18.16.0 |
+| 8d165f2fe214056f654b1d5e4ef343e2c0f2a30dc92474b6badd82a0849da174 | qwen_coder_7b | zero_shot | jest | jest | unknown | 5 | 1 | C:\Users\cdbaz\OneDrive\Documentos\Projetos\usp\tcc\health-microservice-corpus\corpus\node_modules\expect\build\index.js:2155
+  const innerErr = new JestAssertionError();
+                   ^
+
+[JestAssertionError: expect(received).rejects.toThrow(expected)
+
+Expected substring: "Cannot admit an inactive patient"
+Received message:   "Ward is required for ADT A01 (admission)"
+
+    [0m [90m 65 |[39m   validateEncounterFields(dto[33m:[39m [33mCreateEncounterDto[39m)[33m:[39m [36mvoid[39m { |
+| ba81115142a76d75a66199347e2fd8850a50412077406fa1bce6cb655432626f | qwen_coder_3b | zero_shot | jest | jest | unknown | 5 | 1 | C:\Users\cdbaz\OneDrive\Documentos\Projetos\usp\tcc\health-microservice-corpus\corpus\node_modules\expect\build\index.js:2155
+  const innerErr = new JestAssertionError();
+                   ^
+
+[JestAssertionError: expect(received).rejects.toThrow(expected)
+
+Expected message: "Email test@example.com already registered"
+Received message: "Patient with id 1 not found"
+
+    [0m [90m 16 |[39m     [36mconst[39m patient [33m=[39m [36mawait[39m [36mthis[39m[33m.[39mpatientRepository[33m.[ |
+| 59496ca304395c5d720f30e94eadd14794aaaf3114c7a964f7b946ce510736a4 | qwen_coder_3b | zero_shot | jest | jest | unknown | 5 | 1 | C:\Users\cdbaz\OneDrive\Documentos\Projetos\usp\tcc\health-microservice-corpus\corpus\src\patient\patient.service.ts:2103
+      throw new common_1.NotFoundException(`Patient with cpf ${cpf} not found`);
+            ^
+
+[NotFoundException: Patient with cpf 12345678901 not found] {
+  response: {
+    message: 'Patient with cpf 12345678901 not found',
+    error: 'Not Found',
+    statusCode: 404
+  },
+  status: 404,
+  options: {}
+}
+
+Node.js v18.16.0 |
+| 25a53abc660ce30953f15f7ff21c23cf96947fb6bf161f44def14e08dfbe3c94 | qwen_coder_3b | zero_shot | jest | jest | unknown | 5 | 1 | C:\Users\cdbaz\OneDrive\Documentos\Projetos\usp\tcc\health-microservice-corpus\corpus\src\result\result.service.ts:3539
+      throw new common_1.NotFoundException(`No results found for order ${orderId}`);
+            ^
+
+[NotFoundException: No results found for order 1001] {
+  response: {
+    message: 'No results found for order 1001',
+    error: 'Not Found',
+    statusCode: 404
+  },
+  status: 404,
+  options: {}
+}
+
+Node.js v18.16.0 |
+| ffa78fbf66d577fb529d374307996cd6e6a16460922a93d3fbb7cacfef52a19a | gemma_4 | structured | jest | jest | unknown | 5 | 1 | should throw BadRequestException when adtType is A01 and ward is missing: BadRequestException: Ward is required for ADT A01 (admission) |
+| ede61a52c267e7ac456a5e8e1e967b82cdd6d01b4713bf35677eed8e25f4b576 | gemma_4 | few_shot | jest | jest | unknown | 5 | 1 | should throw BadRequestException when adtType is A01 and ward is missing: BadRequestException: Ward is required for ADT A01 (admission) |
+| d81782a79e405d0e6614c6ff3f7b5f42ed6b1bd415efb50a77810bdd48cf396b | qwen_coder_3b | zero_shot | jest | jest | unknown | 5 | 1 | C:\Users\cdbaz\OneDrive\Documentos\Projetos\usp\tcc\health-microservice-corpus\corpus\src\result\result.service.spec.ts:79
+                orderServiceMock.validateOrderResult.mockRejectedValue(new Error('Order validation failed'));
+                                                                       ^
+
+[Error: Order validation failed]
+
+Node.js v18.16.0 |
+| cda619b8da9b88a77d2eef7dd283b40a0d13b605792c7aeb992d81a20c5079ae | gemma_4 | zero_shot | jest | jest | runtime_error | 5 | 1 | should handle ADT type A01 successfully by creating a new patient and encounter: ReferenceError: createEncounter is not defined |
+| ebd0f2f5ac6a534a413b5b30279afa63208c824bc682a7c7a5d76c2a42d9f15d | qwen_coder_3b | zero_shot | jest | jest | runtime_error | 5 | 1 | should throw BadRequestException for ADT A01 without Wart: TypeError: expect(...).toThrowError is not a function |
+| c58ef7471f0199be17da70be4e6aa3446d126223392b9debf630b7a841f82389 | gemma_4 | structured | jest | jest | assertion_failure | 4 | 1 | should assign riskFlag as HIGH when abnormal results exist and activeDays > 7: Error: expect(received).toBe(expected) // Object.is equality
+
+Expected: 1
+Received: false |
+| d594d4f05180b15c3e594b5f2a5365e7eb6f532f3f7847b44ead2cca8900053d | gemma_4 | few_shot | jest | jest | unknown | 4 | 1 | should throw BadRequestException when admitDate is not before transferDate: RangeError: Maximum call stack size exceeded |
+| 2ca322236f16007840cf7e8abfbc15162da7933dc8752f1c6a0b9c76d3d03702 | qwen_coder_7b | few_shot | repair | repair | unparseable_failure | 4 | 1 | 0 failures parsed from Jest output; whole-file repair is disabled for this attempt. |
+| f5749a9f782b05156d0dcd6b9dceb68402e64bb139194667d29526f1336a8bdc | qwen_coder_3b | zero_shot | jest | jest | runtime_error | 4 | 1 | should throw BadRequestException if incoming status is CORRECTED and order is not completed: Error: expect(received).rejects.toThrow(expected)
+
+Expected message: "Cannot register a CORRECTED result until the order is COMPLETED"
+Received message: "Cannot read properties of undefined (reading 'status')"
+
+    [0m [90m 94 |[39m     )[33m;[39m
+     [90m 95 |[39m
+    [31m[1m>[22m[39m[90m 96 |[39m     [36mif[39m (encounter[33m.[39mstatus [33m===[39m [33mEncounterStatus[39m[33m.[3 |
+| d7640ca8c8036e033a4f4a24e16b4948188162487e8a00e956f8b17458743142 | gemma_4 | zero_shot | jest | jest | unknown | 4 | 1 | should throw ConflictException if the new email already exists: Error: Property `findByEmail` does not exist in the provided object |
+| d5bdbfca4557bb2853d8c9477b71f5f212f0adabf4ece0e50e41ec124fe36f1c | gemma_4 | zero_shot | jest | jest | runtime_error | 4 | 1 | should be able to create an order successfully: ReferenceError: createOrder is not defined |
+| ccdef98f8a18c711ee600b6978bbbe97784e93e8dd851570813fd4c4d1a017c4 | gemma_4 | structured | jest | jest | assertion_failure | 4 | 1 | should assign riskFlag as HIGH when abnormal results exist and activeDays > 7: Error: expect(received).toBe(expected) // Object.is equality
+
+Expected: 1
+Received: false |
+| a19dd2f169fea0f558514ac3dac1b23af029a1260819d762429f620cb291dccb | gemma_4 | zero_shot | repair | repair | repair_failed | 4 | 4 | 1 repair attempt(s) did not produce a valid fix |
+| a19dd2f169fea0f558514ac3dac1b23af029a1260819d762429f620cb291dccb | gemma_4 | structured | repair | repair | repair_failed | 4 | 4 | 1 repair attempt(s) did not produce a valid fix |
+| 95b151739a32db11fbbcab42279fde113f7ed9872a38e43a260fbd07f1dd4ab6 | qwen_coder_3b | zero_shot | jest | jest | runtime_error | 4 | 1 | should throw BadRequestException if adtType is not A01: TypeError: expect(...).rejects.toThrowError is not a function |
+| 73a5f390bfa62b824dcfea7d1c88cef8cd7448c3409e8f6df7c4cfd2ee45b0d0 | qwen_coder_7b | structured | jest | jest | assertion_failure | 4 | 1 | should throw NotFoundException when no results found for order: Error: expect(jest.fn()).not.toHaveBeenCalled()
+
+Expected number of calls: 0
+Received number of calls: 1
+
+1: "123" |
+| 24b4041914a12caff3019f909ca561f5576140a3c10ded91105faac26f14d504 | qwen_coder_3b | few_shot | jest | jest | assertion_failure | 4 | 1 | should throw NotFoundException when patient does not exist: Error: expect(received).rejects.toThrow()
+
+Received promise resolved instead of rejected
+Resolved to value: {"activeDays": NaN, "encounter": {"id": "1", "patientId": "2"}, "hasAbnormalResults": false, "orders": {"cancelled": 0, "completed": 0, "inProgress": 0, "pending": 0, "total": 0}, "patient": null, "results": {"abnormal": 0, "preliminary": 0, "total": 0}, "riskFlag": "LOW"} |
+| 3034cd9ad0ba5b46f9f6a4f801e63db802e648003aab647c1bc1ed7d80bc8b88 | gemma_4 | few_shot | jest | jest | assertion_failure | 4 | 1 | should calculate summary correctly when no orders or results exist: Error: expect(received).toBe(expected) // Object.is equality
+
+Expected: "LOW"
+Received: "MEDIUM" |
+| 2ca322236f16007840cf7e8abfbc15162da7933dc8752f1c6a0b9c76d3d03702 | qwen_coder_7b | zero_shot | repair | repair | unparseable_failure | 4 | 1 | 0 failures parsed from Jest output; whole-file repair is disabled for this attempt. |
+| 2dbaf5ec0205c9c6c4947ae9b64b98b4e35b047b4161f779f4f350d887cbb215 | qwen_coder_3b | structured | jest | jest | runtime_error | 4 | 1 | should throw BadRequestException for A01 with missing fields: Error: expect(received).rejects.toThrow(expected)
+
+Expected constructor: BadRequestException
+Received constructor: TypeError
+
+Received message: "Cannot read properties of undefined (reading 'id')"
+
+    [0m [90m 226 |[39m
+     [90m 227 |[39m       [36mconst[39m encounter [33m=[39m [36mawait[39m [36mthis[39m[33m.[39mcreateEncounter({
+    [31m[1m>[22m[39m[90m 228 |[39m         patientId[33m:[39m patient[33m.[39mi |
+| 454a3a382535bec1f9a1f9fd796376898cf16321d409b2ec7b1cae589fb48e4c | gemma_4 | structured | jest | jest | assertion_failure | 4 | 1 | should assign riskFlag as HIGH when abnormal results exist and activeDays > 7: Error: expect(received).toBe(expected) // Object.is equality
+
+Expected: 1
+Received: false |
+| 2edbbb6c5914f5d69a867e624eb2dc155c135a5dae361c10b6f1c1c7cc0e51f9 | qwen_coder_3b | zero_shot | jest | jest | unexpected_throw | 4 | 1 | should throw BadRequestException if admitDate is provided for an ADMITTED encounter: Error: expect(received).rejects.toThrow()
+
+Received promise resolved instead of rejected
+Resolved to value: undefined |
+| 62ecf4a983e221812eb1b76b0ff1d2b5d21e36fbd1504af5f10070817a157ff5 | qwen_coder_3b | structured | jest | jest | unknown | 4 | 1 | should throw BadRequestException when encounter is DISCHARGED: BadRequestException: Cannot update a discharged encounter |
+| 6fa046ba42cfa48245ddc0303f154a05742e24cae2d805ba1ddff7edcd44bcaf | qwen_coder_3b | zero_shot | jest | jest | assertion_failure | 3 | 1 | should return encounters by patient id: Error: expect(received).toEqual(expected) // deep equality
+
+- Expected  - 3
++ Received  + 3
+
+@@ -1,10 +1,10 @@
+  Array [
+    Object {
+-     "admitDate": 2026-08-30T03:19:51.292Z,
++     "admitDate": 2026-08-30T03:19:51.291Z,
+      "adtType": "A01",
+-     "created_at": 2026-08-30T03:19:51.292Z,
++     "created_at": 2026-08-30T03:19:51.291Z,
+      "dischargeDate": null,
+      "id": "1",
+      "orders": Array [],
+      "patient": Object {
+        "id": "1",
+@@  |
+| 7e7f70be0352ca30672a6406fb203362df1ebf8374eae1a437fed8882bffdeae | gemma_4 | zero_shot | jest | jest | runtime_error | 3 | 1 | should throw BadRequestException for invalid status transition: TypeError: Cannot read properties of undefined (reading 'mockRejectedValueOnce') |
+| 84fd9f1d23a464d64a228b6240f830d9b163939dde13ac486fa4574dcbe74c8c | qwen_coder_3b | structured | jest | jest | unknown | 3 | 1 | should return order when incomingStatus is CORRECTED: BadRequestException: Order (id: 123) must have exactly one final result available for correction |
+| 9aac4c9b87cd46443271df15084279627a5839a7695b062adbd70b6cc641d6b5 | qwen_coder_7b | few_shot | jest | jest | runtime_error | 3 | 1 | should create and return a new patient and encounter for A01: TypeError: Cannot read properties of undefined (reading 'active') |
+| c26aefbd1f452a005ffa9eb3986ba62d448e498d4b980253cc21273f505f0828 | qwen_coder_7b | zero_shot | jest | jest | assertion_failure | 3 | 1 | should build encounter summary with no abnormal results and active days less than 7: Error: expect(received).toEqual(expected) // deep equality
+
+- Expected  - 2
++ Received  + 2
+
+@@ -1,7 +1,7 @@
+  Object {
+-   "activeDays": 0,
++   "activeDays": 1247,
+    "encounter": Object {
+      "admitDate": "2023-04-01T00:00:00Z",
+      "id": "123",
+      "orders": Array [],
+      "patientId": "456",
+@@ -22,7 +22,7 @@
+    "results": Object {
+      "abnormal": 0,
+      "preliminary": 0,
+      "total": 0,
+    } |
+| c59ce966defc77e7123cbf67521939b0f14e4b950b70b3ef965d1f335be3830d | qwen_coder_3b | structured | jest | jest | runtime_error | 3 | 1 | should throw BadRequestException when order.status is not COMPLETED: Error: expect(received).rejects.toThrow(expected)
+
+Expected constructor: BadRequestException
+Received constructor: TypeError
+
+Received message: "Cannot read properties of undefined (reading 'status')"
+
+    [0m [90m 94 |[39m     )[33m;[39m
+     [90m 95 |[39m
+    [31m[1m>[22m[39m[90m 96 |[39m     [36mif[39m (encounter[33m.[39mstatus [33m===[39m [33mEncounterStatus[39m[33m.[39m[33mDISCHARGED[39m) {
+     [ |
+| c59ce966defc77e7123cbf67521939b0f14e4b950b70b3ef965d1f335be3830d | qwen_coder_3b | structured | jest | jest | unknown | 3 | 1 | should return order when incomingStatus is CORRECTED: BadRequestException: Order (id: 123) must have exactly one final result available for correction |
+| c9b6eefbfc420d80185d7ef9f979b7095d260b753d5a8827c1ed6d4383aba2d5 | gemma_4 | structured | jest | jest | runtime_error | 3 | 1 | should handle ADT type A01 successfully by creating a new patient and encounter: TypeError: service.createEncounter.mockResolvedValue is not a function |
+| e7c4fe3c5b4a707650480cb410a8372783ac909017aa07346029756c69331dfe | qwen_coder_7b | zero_shot | jest | jest | runtime_error | 3 | 1 | should update order with requestedBy if status is not CANCELLED or COMPLETED: TypeError: Cannot read properties of undefined (reading 'requestedBy') |
+| e30c708129e50ae5b575085b19afad09ee75c62a1dc96a8d1e8c71af08904d29 | qwen_coder_7b | structured | jest | jest | unexpected_throw | 3 | 1 | should throw BadRequestException when admitDate is provided but encounter is not admitted: Error: expect(received).rejects.toThrow()
+
+Received promise resolved instead of rejected
+Resolved to value: undefined |
+| 65ed516df25fd17163325d05fc59da2fc4143fa99ce59efe6dbac21a64473407 | qwen_coder_7b | structured | jest | jest | assertion_failure | 3 | 1 | should build result report with preliminary status: Error: expect(received).toEqual(expected) // deep equality
+
+- Expected  - 2
++ Received  + 2
+
+@@ -2,12 +2,12 @@
+    "examType": "GLUCOSE",
+    "items": Array [
+      Object {
+        "examType": "GLUCOSE",
+        "flag": "NORMAL",
+-       "referenceMax": null,
+-       "referenceMin": null,
++       "referenceMax": 99,
++       "referenceMin": 70,
+        "resultDate": Any<Date>,
+        "resultId": "456",
+        "sourceSystem": null,
+        "st |
+| 58c9260501dd15906f8cd07d095d0983638c86bf18c6a97571ced1c26e406cea | gemma_4 | few_shot | jest | jest | runtime_error | 3 | 1 | should calculate riskFlag as HIGH when abnormal results exist and stay is long: TypeError: Date.now is not a function |
+| 4c35af433f01cfb01995b990aa9fe37551798e8406d471c313f39193030e26e7 | gemma_4 | structured | jest | jest | unknown | 3 | 1 | should update admitDate successfully when conditions are met: Error: expect(received).resolves.toBeDefined()
+
+Received: undefined |
+| 2edbbb6c5914f5d69a867e624eb2dc155c135a5dae361c10b6f1c1c7cc0e51f9 | qwen_coder_3b | zero_shot | jest | jest | runtime_error | 3 | 1 | should update admitDate for an ADMITTED encounter: TypeError: Cannot read properties of undefined (reading 'admitDate') |
+| 62f9f76e2db834fcd4d843fd77bb2d32d0cade33ba817e378cd4257df31492b9 | qwen_coder_7b | structured | jest | jest | runtime_error | 3 | 1 | should update patient with valid data: TypeError: Cannot read properties of undefined (reading 'mockResolvedValue') |
+| b5cfc2d92fe9c848bfef2b2580135c6b014d97539b62bb5b32f48f5219b0d858 | qwen_coder_3b | structured | jest | jest | unexpected_throw | 3 | 1 | should throw NotFoundException if patient is not found: Error: expect(received).rejects.toThrow()
+
+Received promise resolved instead of rejected
+Resolved to value: undefined |
+| 2d1ab9e88875b00fcf47f684107ba05709411f7459b1ba0fa3ef6724685607d8 | qwen_coder_3b | few_shot | jest | jest | unknown | 3 | 1 | should save and return the updated encounter when valid transition: BadRequestException: Ward is required for transfer |
+| 07669857ffb0ce3ee50e620aaa2bdb3e306e87699a96b0b0862427652773b240 | qwen_coder_3b | structured | repair | repair | max_repairs_exceeded | 3 | 3 | Runtime repair exhausted MAX_RUNTIME_REPAIRS=5 attempts |
+| 2ca322236f16007840cf7e8abfbc15162da7933dc8752f1c6a0b9c76d3d03702 | qwen_coder_3b | few_shot | repair | repair | unparseable_failure | 3 | 1 | 0 failures parsed from Jest output; whole-file repair is disabled for this attempt. |
+| 262c2c9092cb193aafecb346a9a8f854b7a0bb600af7b42e474a969c4bb07da6 | qwen_coder_3b | zero_shot | jest | jest | assertion_failure | 3 | 1 | should return the correct EncounterSummary for a valid encounter: Error: expect(received).toEqual(expected) // deep equality
+
+- Expected  - 2
++ Received  + 2
+
+@@ -1,7 +1,7 @@
+  Object {
+-   "activeDays": 0,
++   "activeDays": 1337,
+    "encounter": Object {
+      "admitDate": "2023-01-01T00:00:00Z",
+      "id": "1",
+      "orders": Array [
+        Object {
+@@ -36,7 +36,7 @@
+    "results": Object {
+      "abnormal": 0,
+      "preliminary": 1,
+      "total": 1,
+    },
+-   "riskFlag": "LOW",
++   "ri |
+| 19c3a67ad277178a5b20cf1a2df7024f35b174e18635fc614851af05f212cff9 | gemma_4 | few_shot | jest | jest | assertion_failure | 2 | 1 | should throw BadRequestException when the patient is inactive: Error: expect(received).rejects.toThrow(expected)
+
+Expected substring: "Cannot admit an inactive patient"
+Received message:   "Ward is required for ADT A01 (admission)"
+
+    [0m [90m 65 |[39m   validateEncounterFields(dto[33m:[39m [33mCreateEncounterDto[39m)[33m:[39m [36mvoid[39m {
+     [90m 66 |[39m     [36mif[39m (dto[33m.[39madtType [33m===[39m [33mAdtType[39m[33m.[39m[33mA01[39m [33m&&[39m [33m![39mdt |
+| 07669857ffb0ce3ee50e620aaa2bdb3e306e87699a96b0b0862427652773b240 | gemma_4 | zero_shot | repair | repair | max_repairs_exceeded | 2 | 2 | Runtime repair exhausted MAX_RUNTIME_REPAIRS=5 attempts |
+| 023bf4c21b1b450f692670fe269119cbc7404e276c608082d766fc8f3cdf8fe2 | gemma_4 | few_shot | jest | jest | runtime_error | 2 | 1 | should calculate riskFlag as HIGH when abnormal results exist and stay is long: ReferenceError: mockNow is not defined |
+| 065bdbc82bbbf1cadc9a3ddbb40e2e70c6502d040913ac8ec22b2daf25bf09b5 | gemma_4 | zero_shot | jest | jest | test_discovery_failure | 2 | 1 | FAIL src/order/order.service.spec.ts
+  ● Test suite failed to run
+
+    [96msrc/order/order.service.spec.ts[0m:[93m287[0m:[93m25[0m - [91merror[0m[90m TS1138: [0mParameter declaration expected.
+
+    [7m287[0m    get<OrderRepository>(() => orderRepositoryMock),
+    [7m   [0m [91m                        ~[0m
+    [96msrc/order/order.service.spec.ts[0m:[93m287[0m:[93m28[0m - [91merror[0m[90m TS1005: [0m';' expected.
+
+    [7m287[0m    get<OrderRepository>(() => orderReposit |
+| 23b8cdca2da23f7a77f77818557c9a713dc6ae7fa9c2a28af65704a4bc49f653 | gemma_4 | zero_shot | jest | jest | assertion_failure | 2 | 1 | should throw BadRequestException if the patient is inactive: Error: expect(received).rejects.toThrow(expected)
+
+Expected substring: "Cannot admit an inactive patient"
+Received message:   "Ward is required for ADT A01 (admission)"
+
+    [0m [90m 65 |[39m   validateEncounterFields(dto[33m:[39m [33mCreateEncounterDto[39m)[33m:[39m [36mvoid[39m {
+     [90m 66 |[39m     [36mif[39m (dto[33m.[39madtType [33m===[39m [33mAdtType[39m[33m.[39m[33mA01[39m [33m&&[39m [33m![39mdto |
+| 1c3e9dc0f61fe69f2ac71a743e21eab05e22e53b92c67a181939cc47aa98a16c | qwen_coder_7b | zero_shot | jest | jest | runtime_error | 2 | 1 | should update order with notes if status is not CANCELLED or COMPLETED: TypeError: Cannot read properties of undefined (reading 'notes') |
+| 1d7548817786e71a56a0459c1e8e510bfde03df06647bbccb516639af2f20eb6 | qwen_coder_7b | zero_shot | jest | jest | assertion_failure | 2 | 1 | should build result report with preliminary results: Error: expect(received).toEqual(expected) // deep equality
+
+- Expected  - 10
++ Received  + 10
+
+@@ -1,28 +1,28 @@
+  Object {
+    "examType": "GLUCOSE",
+    "items": Array [
+      Object {
+        "examType": "GLUCOSE",
+-       "flag": "UNKNOWN",
+-       "referenceMax": null,
+-       "referenceMin": null,
+-       "resultDate": Any<Date>,
++       "flag": "NORMAL",
++       "referenceMax": 99,
++       "referenceMin": 70,
++       "resultDate": undef |
+| 2099d12822d3c0b55aba00e12795b77fdc1d8318957b03c1930dc2e96ade708e | qwen_coder_7b | zero_shot | jest | jest | unexpected_throw | 2 | 1 | should throw BadRequestException if the DTO is invalid: Error: expect(received).rejects.toThrow()
+
+Received promise resolved instead of rejected
+Resolved to value: undefined |
+| 2bc0319843200802f5b2ca203f1572750c4266dca2058daad48a364537846a1e | gemma_4 | structured | jest | jest | unexpected_throw | 2 | 1 | should throw BadRequestException for invalid status transition: Error: expect(received).rejects.toThrow()
+
+Received promise resolved instead of rejected
+Resolved to value: undefined |
+| 2b4174000bb2ce09b371befe017029260089b679a199f81a21ab39398057e434 | gemma_4 | zero_shot | repair | repair | repair_failed | 2 | 2 | 2 repair attempt(s) did not produce a valid fix |
+| 281a9972c996fb2bdf05818ff014923b327c968bc298e91df1f4a70fe981f3e6 | qwen_coder_3b | structured | jest | jest | runtime_error | 2 | 1 | should throw BadRequestException when admitDate is undefined: TypeError: this.encounterRepository.save is not a function |
+| 2bf539176a02241229cc54cc011ddf819f548cb12fe63e01a9244b137ad453f0 | gemma_4 | zero_shot | jest | jest | unknown | 2 | 1 | should throw BadRequestException if the encounter is discharged: Error: Cannot use spyOn on a primitive value; undefined given |
+| 67bd6696c697e0088d9dd1347d858e3764e1df3912d70024d02f88f714a7333c | qwen_coder_3b | few_shot | jest | jest | unknown | 2 | 1 | should validate encounter fields: BadRequestException: Only ADT A01 can create an encounter; use the ADT workflow for A02, A03 and A08 |
+| 64a17718587afd0212aafe2f4bde58a00230430ff4ad458cf6956d11073ba5a6 | gemma_4 | zero_shot | jest | jest | unknown | 2 | 1 | should throw ConflictException if CPF already exists: Error: expect(jest.fn()).toHaveBeenCalledTimes(expected)
+
+Expected number of calls: 1
+Received number of calls: 2 |
+| 62ecf4a983e221812eb1b76b0ff1d2b5d21e36fbd1504af5f10070817a157ff5 | qwen_coder_3b | structured | jest | jest | runtime_error | 2 | 1 | should throw BadRequestException when admitDate is undefined: TypeError: this.encounterRepository.save is not a function |
+| 493c3b2597c8c13ee528b0f601490f897e54cfbc535850a0e91e2e837dfa439c | qwen_coder_3b | few_shot | jest | jest | unexpected_throw | 2 | 1 | should throw NotFoundException when order does not exist: Error: expect(received).rejects.toThrow()
+
+Received promise resolved instead of rejected
+Resolved to value: undefined |
+| 4e0dc38779704ab9b9929122b83651aa5c2984821f74989995ddaed740a5a440 | gemma_4 | structured | jest | jest | unknown | 2 | 1 | should throw ConflictException if CPF already exists: Error: expect(jest.fn()).toHaveBeenCalledTimes(expected)
+
+Expected number of calls: 1
+Received number of calls: 2 |
+| 4b0acb4b83d1683941005fdfb8e26d46727e4439b9f750f8c2f0f8724b767310 | qwen_coder_3b | zero_shot | jest | jest | unknown | 2 | 1 | should throw BadRequestException if order is already cancelled: Error: Nest can't resolve dependencies of the OrderService (OrderRepository, ?). Please make sure that the argument EncounterService at index [1] is available in the RootTestModule module.
+
+Potential solutions:
+- Is RootTestModule a valid NestJS module?
+- If EncounterService is a provider, is it part of the current RootTestModule?
+- If EncounterService is exported from a separate @Module, is that module imported within RootTestModul |
+| 562ab0f84e4587dd49f6dd0223ca0cbe544b3588c39fa0eb2093ebf5fb72355c | qwen_coder_3b | zero_shot | jest | jest | assertion_failure | 2 | 1 | should update an existing patient and encounter for A01: BadRequestException: Ward is required for ADT A01 (admission) |
+| 51beeb18a327884b8a316afddae4306e8981e00d00f0577365c0a214d750b2b6 | gemma_4 | structured | jest | jest | unknown | 2 | 1 | should return the order when incomingStatus is CORRECTED and conditions are met: Error: expect(received).resolves.toBe()
+
+Received promise rejected instead of resolved
+Rejected to value: [BadRequestException: Cannot register a CORRECTED result until the order is COMPLETED] |
+| 2dbaf5ec0205c9c6c4947ae9b64b98b4e35b047b4161f779f4f350d887cbb215 | qwen_coder_3b | structured | jest | jest | unknown | 2 | 1 | should find active encounter and update status for A02: NotFoundException: Encounter with id 456 not found |
+| 3ff4a86a30016868b4fbf9979c39a35908985f085290d74db8a84ec08f1d2fae | qwen_coder_3b | structured | jest | jest | unknown | 2 | 1 | should throw an error if the order does not exist: Error: expect(jest.fn()).not.toHaveBeenCalled()
+
+Expected number of calls: 0
+Received number of calls: 1
+
+1: {"notes": null, "orderId": "123", "referenceMax": null, "referenceMin": null, "resultDate": 2023-10-01T00:00:00.000Z, "sourceSystem": null, "status": "PRELIMINARY", "unit": "cm", "value": 100} |
+| 6ac9ecad5a6c04c05ca607cd2c41147157d3f0ae99b586c8a32eba2ed3b62f3b | qwen_coder_3b | structured | jest | jest | assertion_failure | 2 | 1 | should handle referenceMin and referenceMax as null: Error: expect(received).toBe(expected) // Object.is equality
+
+Expected: "UNKNOWN"
+Received: "NORMAL" |
+| 7feb43d8441e86382dcf59d6c3d24509eb98e7635eaa30a3454844eba161e4f3 | qwen_coder_7b | few_shot | jest | jest | test_discovery_failure | 2 | 1 | FAIL src/order/order.service.spec.ts
+  ● Test suite failed to run
+
+    [96msrc/order/order.service.spec.ts[0m:[93m445[0m:[93m79[0m - [91merror[0m[90m TS1005: [0m'(' expected.
+
+    [7m445[0m   it('should update and save the order when it is not cancelled', async () => => {
+    [7m   [0m [91m                                                                              ~~[0m
+
+Test Suites: 1 failed, 1 total
+Tests:       0 total
+Snapshots:   0 total
+Time:        0.809 s
+Ran all test s |
+| 8c00374cba640dd209347ba4f39205cb12d9f17625acc03cce106ca915120750 | qwen_coder_7b | few_shot | jest | jest | unexpected_throw | 2 | 1 | should throw BadRequestException when admitDate is in the future: Error: expect(received).rejects.toThrow()
+
+Received promise resolved instead of rejected
+Resolved to value: undefined |
+| 84fd9f1d23a464d64a228b6240f830d9b163939dde13ac486fa4574dcbe74c8c | qwen_coder_3b | structured | jest | jest | runtime_error | 2 | 1 | should throw BadRequestException when order.status is COMPLETED: Error: expect(received).rejects.toThrow(expected)
+
+Expected constructor: BadRequestException
+Received constructor: TypeError
+
+Received message: "Cannot read properties of undefined (reading 'status')"
+
+    [0m [90m 94 |[39m     )[33m;[39m
+     [90m 95 |[39m
+    [31m[1m>[22m[39m[90m 96 |[39m     [36mif[39m (encounter[33m.[39mstatus [33m===[39m [33mEncounterStatus[39m[33m.[39m[33mDISCHARGED[39m) {
+     [90m  |
+| 9412368077b2b0cf4f2ef79cd368878534d6691f2ae767973b7c77168260c6c9 | gemma_4 | few_shot | jest | jest | unknown | 2 | 1 | should throw BadRequestException when adtType is A01 and ward is missing: BadRequestException: Ward is required for ADT A01 (admission) |
+| 95afaf48f4435f786ca9b55a12066eadd00bb159140495267efba96454d139f6 | qwen_coder_7b | structured | jest | jest | assertion_failure | 2 | 1 | should handle encounter with abnormal results: Error: expect(received).toBe(expected) // Object.is equality
+
+Expected: 14
+Received: 1247 |
+| b73ffe7b8f509c79fa2ed112301ea503a712e59e49a16f0f829297381875253a | gemma_4 | zero_shot | jest | jest | assertion_failure | 2 | 1 | should calculate the encounter summary correctly with no abnormal results and short active days: Error: expect(received).toBe(expected) // Object.is equality
+
+Expected: 9
+Received: 0 |
+| a19dd2f169fea0f558514ac3dac1b23af029a1260819d762429f620cb291dccb | qwen_coder_7b | structured | repair | repair | repair_failed | 2 | 1 | 1 repair attempt(s) did not produce a valid fix |
+| 9ada7f16deb6f89717518873c424a99ca3ed02a3fbc24364f5166324b94e6d5d | qwen_coder_3b | few_shot | jest | jest | runtime_error | 2 | 1 | should throw BadRequestException when A02 requires missing fields: Error: expect(received).rejects.toThrow(expected)
+
+Expected constructor: BadRequestException
+Received constructor: TypeError
+
+Received message: "Cannot read properties of undefined (reading 'id')"
+
+    [0m [90m 243 |[39m       [36mconst[39m patient [33m=[39m [36mawait[39m [36mthis[39m[33m.[39mpatientService[33m.[39mfindByCpfOrFail(dto[33m.[39mcpf)[33m;[39m
+     [90m 244 |[39m       [36mconst[39m encounter  |
+| 96f939e0b48b40627b492061e883e98dc31e3b1b7f639c79c0a8727bd9751473 | qwen_coder_3b | zero_shot | jest | jest | assertion_failure | 2 | 1 | should throw a BadRequestException if the dto is invalid: Error: expect(received).toThrow(expected)
+
+Expected constructor: BadRequestException
+
+Received function did not throw |
+| 9b73ccd0074936c767bf8f2216c53721f4b8f093736c7c8b04f308126a5f45f2 | gemma_4 | structured | repair | repair | repair_failed | 2 | 1 | 4 repair attempt(s) did not produce a valid fix |
+| 9c19089392ac036fbb5382b6f809dd57de3b408f6575854e2c8f16504ea2983b | qwen_coder_3b | few_shot | jest | jest | unexpected_throw | 2 | 1 | should throw BadRequestException when status transition is invalid: Error: expect(received).rejects.toThrow()
+
+Received promise resolved instead of rejected
+Resolved to value: undefined |
+| 9d855170ff474bd3227909b8b43468f1e7d58e73eb8bf58109470c73f4692d8f | qwen_coder_7b | structured | jest | jest | runtime_error | 2 | 1 | should update encounter status for A02: ReferenceError: transitionEncounterStatusMock is not defined |
+| a17bdfef92622e440d0f0c1c2469194a0ae138d92af1ef8170c90a2aa68e690f | qwen_coder_7b | few_shot | jest | jest | assertion_failure | 2 | 1 | should throw ConflictException when patient already has an active encounter: Error: expect(received).rejects.toThrow(expected)
+
+Expected constructor: ConflictException
+Received constructor: BadRequestException
+
+Received message: "Ward is required for ADT A01 (admission)"
+
+    [0m [90m 65 |[39m   validateEncounterFields(dto[33m:[39m [33mCreateEncounterDto[39m)[33m:[39m [36mvoid[39m {
+     [90m 66 |[39m     [36mif[39m (dto[33m.[39madtType [33m===[39m [33mAdtType[39m[33m.[39m |
+| 75c4f097a6ce038c4d31d76b75db16f6a0242bfc912b8e4b7963dee9df33d3e1 | gemma_4 | few_shot | jest | jest | unknown | 2 | 1 | should create a patient and an encounter when patient does not exist: BadRequestException: Ward is required for ADT A01 (admission) |
+| 6abe54e42788ab64926db0c21015976a5161dfc44ddbd9fbbaa539dce746a71d | qwen_coder_3b | structured | jest | jest | unexpected_throw | 2 | 1 | should throw a BadRequestException if dto is invalid: Error: expect(received).rejects.toThrow()
+
+Received promise resolved instead of rejected
+Resolved to value: undefined |
+| ceb2c2f6e8c25984f1bf00817f1d33d0da70f6e873b13dc83bc3995c4d4a72e5 | qwen_coder_3b | zero_shot | jest | jest | unknown | 2 | 1 | should update encounter status and transferDate: NotFoundException: Encounter with id 1 not found |
+| cf2f16e39ef755ea6f52aa73907929e9e621f7edd52dce4b30d55985c5e7e48a | qwen_coder_3b | structured | jest | jest | unexpected_throw | 2 | 1 | should throw a NotFoundException if no results are found: Error: expect(received).rejects.toThrow()
+
+Received promise resolved instead of rejected
+Resolved to value: [] |
+| d11a9e64884678b9df4a0001f4697254ae02de2e7d9354b613731391a94ccf61 | qwen_coder_3b | structured | jest | jest | unexpected_throw | 2 | 1 | should throw an error if the order does not exist: Error: expect(received).rejects.toThrow()
+
+Received promise resolved instead of rejected
+Resolved to value: undefined |
+| d8ba1fa0ec9695177e6e597b73a69a2b8a644506f6047ca08f9b9bc3027218a7 | gemma_4 | zero_shot | repair | repair | repair_failed | 2 | 2 | 3 repair attempt(s) did not produce a valid fix |
+| ebfa0562bd7ebedc10712be53ad0735a9e70c043eec5b3bf7117044d089e3439 | qwen_coder_7b | few_shot | jest | jest | runtime_error | 2 | 1 | should throw BadRequestException when incoming status is CORRECTED and order does not have exactly one final result: Error: expect(received).rejects.toThrow(expected)
+
+Expected constructor: BadRequestException
+Received constructor: TypeError
+
+Received message: "Cannot read properties of undefined (reading 'status')"
+
+    [0m [90m 94 |[39m     )[33m;[39m
+     [90m 95 |[39m
+    [31m[1m>[22m[39m[90m 96 |[39m     [36mif[39m (encounter[33m.[39mstatus [33m===[39m [33mEncounterStatu |
+| f12f0c22bc268e5568afb997525445ba0068f2caab7037a39806c92fd9a635a8 | gemma_4 | structured | jest | jest | assertion_failure | 2 | 1 | should correctly calculate summary and flags for a mix of result statuses and reference ranges: Error: expect(received).toBe(expected) // Object.is equality
+
+Expected: 1
+Received: 2 |
+
+## Events by model x strategy
+
+| model | strategy | total_events | functions_observed | distinct_attempts_logged | events_per_function | events_per_attempt |
+| --- | --- | --- | --- | --- | --- | --- |
+| gemma_4 | few_shot | 54 | 12 | 25 | 4.5 | 2.16 |
+| gemma_4 | structured | 76 | 11 | 32 | 6.91 | 2.38 |
+| gemma_4 | zero_shot | 75 | 13 | 41 | 5.77 | 1.83 |
+| qwen_coder_3b | few_shot | 62 | 15 | 28 | 4.13 | 2.21 |
+| qwen_coder_3b | structured | 85 | 16 | 48 | 5.31 | 1.77 |
+| qwen_coder_3b | zero_shot | 193 | 25 | 124 | 7.72 | 1.56 |
+| qwen_coder_7b | few_shot | 46 | 13 | 28 | 3.54 | 1.64 |
+| qwen_coder_7b | structured | 47 | 10 | 20 | 4.7 | 2.35 |
+| qwen_coder_7b | zero_shot | 47 | 13 | 26 | 3.62 | 1.81 |
+
+## Events by phase
+
+| model | strategy | phase | total_events | functions_observed | distinct_attempts_logged | events_per_function | events_per_attempt |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| gemma_4 | few_shot | jest | 52 | 12 | 23 | 4.33 | 2.26 |
+| gemma_4 | few_shot | repair | 2 | 2 | 2 | 1.0 | 1.0 |
+| gemma_4 | structured | generation | 1 | 1 | 0 | 1.0 |  |
+| gemma_4 | structured | jest | 67 | 10 | 25 | 6.7 | 2.68 |
+| gemma_4 | structured | pipeline | 1 | 1 | 0 | 1.0 |  |
+| gemma_4 | structured | repair | 7 | 5 | 7 | 1.4 | 1.0 |
+| gemma_4 | zero_shot | generation | 1 | 1 | 0 | 1.0 |  |
+| gemma_4 | zero_shot | jest | 54 | 12 | 23 | 4.5 | 2.35 |
+| gemma_4 | zero_shot | pipeline | 2 | 2 | 0 | 1.0 |  |
+| gemma_4 | zero_shot | repair | 18 | 11 | 18 | 1.64 | 1.0 |
+| qwen_coder_3b | few_shot | generation | 2 | 2 | 0 | 1.0 |  |
+| qwen_coder_3b | few_shot | jest | 54 | 13 | 23 | 4.15 | 2.35 |
+| qwen_coder_3b | few_shot | pipeline | 1 | 1 | 0 | 1.0 |  |
+| qwen_coder_3b | few_shot | repair | 5 | 2 | 5 | 2.5 | 1.0 |
+| qwen_coder_3b | structured | jest | 66 | 16 | 32 | 4.12 | 2.06 |
+| qwen_coder_3b | structured | pipeline | 3 | 3 | 0 | 1.0 |  |
+| qwen_coder_3b | structured | repair | 16 | 4 | 16 | 4.0 | 1.0 |
+| qwen_coder_3b | zero_shot | jest | 132 | 25 | 73 | 5.28 | 1.81 |
+| qwen_coder_3b | zero_shot | pipeline | 10 | 10 | 0 | 1.0 |  |
+| qwen_coder_3b | zero_shot | repair | 51 | 11 | 51 | 4.64 | 1.0 |
+| qwen_coder_7b | few_shot | jest | 39 | 13 | 22 | 3.0 | 1.77 |
+| qwen_coder_7b | few_shot | pipeline | 1 | 1 | 0 | 1.0 |  |
+| qwen_coder_7b | few_shot | repair | 6 | 2 | 6 | 3.0 | 1.0 |
+| qwen_coder_7b | structured | jest | 43 | 10 | 17 | 4.3 | 2.53 |
+| qwen_coder_7b | structured | pipeline | 1 | 1 | 0 | 1.0 |  |
+| qwen_coder_7b | structured | repair | 3 | 1 | 3 | 3.0 | 1.0 |
+| qwen_coder_7b | zero_shot | jest | 41 | 13 | 21 | 3.15 | 1.95 |
+| qwen_coder_7b | zero_shot | pipeline | 1 | 1 | 0 | 1.0 |  |
+| qwen_coder_7b | zero_shot | repair | 5 | 1 | 5 | 5.0 | 1.0 |
