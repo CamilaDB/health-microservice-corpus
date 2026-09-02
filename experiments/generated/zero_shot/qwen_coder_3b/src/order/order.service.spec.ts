@@ -67,293 +67,222 @@ describe('OrderService', () => {
   describe('FN_searchOrders_END', () => {
 describe('searchOrders', () => {
   it('should return an empty array when no orders are found', async () => {
+    const dto: SearchOrdersDto = {};
     orderRepositoryMock.search.mockResolvedValue([]);
 
-    const result = await service.searchOrders({});
+    const result = await service.searchOrders(dto);
 
     expect(result).toEqual([]);
+    expect(orderRepositoryMock.search).toHaveBeenCalledWith(dto);
   });
 
   it('should return orders based on the provided dto', async () => {
-    const dto: SearchOrdersDto = {
-      status: OrderStatus.COMPLETED,
-      dateFrom: '2023-01-01',
-      dateTo: '2023-12-31',
-      patientId: '123',
-      encounterId: '456',
-    };
-
+    const dto: SearchOrdersDto = { status: OrderStatus.COMPLETED };
     const orders: Order[] = [
-      { id: '1', encounterId: '456', examType: ExamType.HEMOGRAM, status: OrderStatus.COMPLETED, requestedAt: new Date(), requestedBy: 'John Doe', notes: null, created_at: new Date(), updated_at: new Date(), encounter: { id: '456', status: EncounterStatus.ACTIVE }, results: [] },
+      { id: '1', status: OrderStatus.COMPLETED },
+      { id: '2', status: OrderStatus.PENDING },
     ];
-
     orderRepositoryMock.search.mockResolvedValue(orders);
 
     const result = await service.searchOrders(dto);
 
     expect(result).toEqual(orders);
+    expect(orderRepositoryMock.search).toHaveBeenCalledWith(dto);
   });
 
-  it.skip('should throw a BadRequestException if the dto is invalid', async () => {
-        const dto: SearchOrdersDto = {
-          status: 'INVALID_STATUS',
-          dateFrom: '2023-01-01',
-          dateTo: '2023-12-31',
-          patientId: '123',
-          encounterId: '456',
-        };
-
-        expect(() => service.searchOrders(dto)).toThrow(BadRequestException);
-      });
-
-  it.skip('should throw a NotFoundException if no orders are found with the provided dto', async () => {
+  it.skip('should throw a NotFoundException if no orders are found', async () => {
+        const dto: SearchOrdersDto = {};
         orderRepositoryMock.search.mockResolvedValue([]);
 
-        expect(() => service.searchOrders({})).toThrow(NotFoundException);
+        await expect(service.searchOrders(dto)).rejects.toThrow(NotFoundException);
+        expect(orderRepositoryMock.search).toHaveBeenCalledWith(dto);
       });
 });
 });
 
   describe('FN_searchOrdersAdvanced_END', () => {
-describe('OrderService', () => {
-  let service: OrderService;
-  let orderRepositoryMock: jest.Mocked<OrderRepository>;
+describe('searchOrdersAdvanced', () => {
+  it('should return paginated orders based on the provided dto', async () => {
+    const dto: SearchOrdersAdvancedDto = {
+      status: OrderStatus.PENDING,
+      examType: ExamType.HEMOGRAM,
+      dateFrom: '2023-01-01',
+      dateTo: '2023-12-31',
+      patientId: '123',
+      encounterId: '456',
+      requestedBy: 'John Doe',
+      sortBy: OrderSortField.REQUESTED_AT,
+      sortDirection: SortDirection.DESC,
+      page: 1,
+      limit: 10,
+    };
 
-  beforeEach(async () => {
-    orderRepositoryMock = {
-      searchAdvanced: jest.fn().mockResolvedValue({
-        data: [],
-        total: 0,
-        page: 1,
-        limit: 10,
-        totalPages: 1,
-      }),
-    } as unknown as jest.Mocked<OrderRepository>;
+    const expectedResponse: PaginatedOrders = {
+      data: [],
+      total: 0,
+      page: 1,
+      limit: 10,
+      totalPages: 0,
+    };
 
-    const module: TestingModule =
-      await Test.createTestingModule({
-        providers: [
-          OrderService,
-          { provide: OrderRepository, useValue: orderRepositoryMock },
-        ],
-      }).compile();
+    orderRepositoryMock.searchAdvanced.mockResolvedValue(expectedResponse);
 
-    service = module.get<OrderService>(OrderService);
+    const result = await service.searchOrdersAdvanced(dto);
+
+    expect(result).toEqual(expectedResponse);
+    expect(orderRepositoryMock.searchAdvanced).toHaveBeenCalledWith(dto);
   });
 
-  it.skip('should return an empty paginated orders when searchAdvanced is called with no dto', async () => {
-        const result = await service.searchOrdersAdvanced({} as SearchOrdersAdvancedDto);
-        expect(result).toEqual({
-          data: [],
-          total: 0,
-          page: 1,
-          limit: 10,
-          totalPages: 1,
-        });
-      });
-});
-});
-
-  describe('FN_validateOrderResult_END', () => {
-describe('validateOrderResult', () => {
-  it('should throw BadRequestException if order is cancelled', async () => {
-      const orderId = '123';
-      const incomingStatus = ResultStatus.FINAL;
-      const order: Order = {
-        id: orderId,
-        encounterId: '456',
-        status: OrderStatus.CANCELLED,
-      };
-
-      jest.spyOn(orderRepositoryMock, 'findById').mockResolvedValue(order);
-
-      await expect(() => service.validateOrderResult(orderId, incomingStatus)).rejects.toThrow(
-        new BadRequestException(`Cannot add result to a cancelled order (id: ${orderId})`),
-      );
-    });
-
-
-  it('should throw BadRequestException if encounter is discharged', async () => {
-      const orderId = '123';
-      const incomingStatus = ResultStatus.FINAL;
-      const order: Order = {
-        id: orderId,
-        encounterId: '456',
-        status: OrderStatus.COMPLETED,
-        encounter: {
-          id: '456',
-          status: EncounterStatus.DISCHARGED,
-        },
-      };
-
-      jest.spyOn(orderRepositoryMock, 'findById').mockResolvedValue(order);
-      jest.spyOn(encounterServiceMock, 'getEncounterById').mockResolvedValue(order.encounter);
-
-      await expect(() => service.validateOrderResult(orderId, incomingStatus)).rejects.toThrow(
-        new BadRequestException(`Cannot add result to an order from a discharged encounter (id: ${order.encounterId})`),
-      );
-    });
-
-
-  it.skip('should throw BadRequestException if incoming status is CORRECTED and order is not completed', async () => {
-          const orderId = '123';
-          const incomingStatus = ResultStatus.CORRECTED;
-          const order: Order = {
-            id: orderId,
-            encounterId: '456',
-            status: OrderStatus.PENDING,
+  it.skip('should throw a BadRequestException if the dto is invalid', async () => {
+          const dto: SearchOrdersAdvancedDto = {
+            status: 'invalidStatus' as OrderStatus,
+            examType: 'invalidExamType' as ExamType,
+            dateFrom: 'invalidDate',
+            dateTo: 'invalidDate',
+            patientId: 'invalidId',
+            encounterId: 'invalidId',
+            requestedBy: 'invalidName',
+            sortBy: 'invalidSortField' as OrderSortField,
+            sortDirection: 'invalidSortDirection' as SortDirection,
+            page: 0,
+            limit: 0,
           };
 
-          jest.spyOn(orderRepositoryMock, 'findById').mockResolvedValue(order);
-
-          await expect(() => service.validateOrderResult(orderId, incomingStatus)).rejects.toThrow(
-            new BadRequestException('Cannot register a CORRECTED result until the order is COMPLETED'),
-          );
+          await expect(service.searchOrdersAdvanced(dto)).rejects.toThrow(BadRequestException);
         });
 
 
-  it.skip('should throw BadRequestException if order already has a final or corrected result', async () => {
-            const orderId = '123';
-            const incomingStatus = ResultStatus.FINAL;
-            const order: Order = {
-              id: orderId,
-              encounterId: '456',
-              status: OrderStatus.COMPLETED,
-              results: [
-                { status: ResultStatus.FINAL },
-                { status: ResultStatus.CORRECTED },
-              ],
-            };
-
-            jest.spyOn(orderRepositoryMock, 'findById').mockResolvedValue(order);
-
-            await expect(() => service.validateOrderResult(orderId, incomingStatus)).rejects.toThrow(
-              `Order (id: ${orderId}) must have exactly one final result available for correction`,
-            );
-          });
-
-
-  it.skip('should throw BadRequestException if order is already completed', async () => {
-            const orderId = '123';
-            const incomingStatus = ResultStatus.FINAL;
-            const order: Order = {
-              id: orderId,
-              encounterId: '456',
-              status: OrderStatus.COMPLETED,
-            };
-
-            jest.spyOn(orderRepositoryMock, 'findById').mockResolvedValue(order);
-
-            await expect(() => service.validateOrderResult(orderId, incomingStatus)).rejects.toThrow(
-              new BadRequestException(
-                `Order already completed (id: ${orderId}). Cannot add another result`,
-              ),
-            );
-          });
-
-
-  it.skip('should throw BadRequestException if order is PENDING and incoming status is FINAL', async () => {
-            const orderId = '123';
-            const incomingStatus = ResultStatus.FINAL;
-            const order: Order = {
-              id: orderId,
-              encounterId: '456',
+  it.skip('should throw a NotFoundException if no orders are found', async () => {
+            const dto: SearchOrdersAdvancedDto = {
               status: OrderStatus.PENDING,
+              examType: ExamType.HEMOGRAM,
+              dateFrom: '2023-01-01',
+              dateTo: '2023-12-31',
+              patientId: '123',
+              encounterId: '456',
+              requestedBy: 'John Doe',
+              sortBy: OrderSortField.REQUESTED_AT,
+              sortDirection: SortDirection.DESC,
+              page: 1,
+              limit: 10,
             };
 
-            jest.spyOn(orderRepositoryMock, 'findById').mockResolvedValue(order);
+            orderRepositoryMock.searchAdvanced.mockResolvedValue({ data: [], total: 0, page: 1, limit: 10, totalPages: 0 });
 
-            await expect(() => service.validateOrderResult(orderId, incomingStatus)).rejects.toThrow(
-              new BadRequestException(
-                'Cannot register a FINAL result for a PENDING order. Order must be IN_PROGRESS first',
-              ),
-            );
+            await expect(service.searchOrdersAdvanced(dto)).rejects.toThrow(NotFoundException);
           });
 
-
-  it.skip('should update order status to IN_PROGRESS and save it', async () => {
-        const orderId = '123';
-        const incomingStatus = ResultStatus.FINAL;
-        const order: Order = {
-          id: orderId,
-          encounterId: '456',
-          status: OrderStatus.PENDING,
-        };
-
-        jest.spyOn(orderRepositoryMock, 'findById').mockResolvedValue(order);
-        jest.spyOn(orderRepositoryMock, 'save').mockResolvedValue(order);
-
-        const result = await service.validateOrderResult(orderId, incomingStatus);
-
-        expect(result).toEqual(order);
-        expect(orderRepositoryMock.save).toHaveBeenCalledWith(order);
-      });
-
-  it.skip('should update order status to COMPLETED and save it', async () => {
-        const orderId = '123';
-        const incomingStatus = ResultStatus.FINAL;
-        const order: Order = {
-          id: orderId,
-          encounterId: '456',
-          status: OrderStatus.IN_PROGRESS,
-          results: [
-            { status: ResultStatus.FINAL },
-          ],
-        };
-
-        jest.spyOn(orderRepositoryMock, 'findById').mockResolvedValue(order);
-        jest.spyOn(orderRepositoryMock, 'save').mockResolvedValue(order);
-
-        const result = await service.validateOrderResult(orderId, incomingStatus);
-
-        expect(result).toEqual(order);
-        expect(orderRepositoryMock.save).toHaveBeenCalledWith(order);
-      });
-});
+})
 });
 
   describe('FN_cancelOrder_END', () => {
-describe('OrderService', () => {
-  let service: OrderService;
-  let orderRepositoryMock: jest.Mocked<OrderRepository>;
+describe('cancelOrder', () => {
+  it('should throw BadRequestException if order is already cancelled', async () => {
+    const orderId = '123';
+    const order: Order = {
+      id: orderId,
+      status: OrderStatus.CANCELLED,
+    };
 
-  afterEach(() => {
-    jest.clearAllMocks();
+    orderRepositoryMock.findById.mockResolvedValue(order);
+
+    await expect(service.cancelOrder(orderId)).rejects.toThrow(BadRequestException);
   });
 
-  beforeEach(async () => {
-    orderRepositoryMock = {
-      findById: jest.fn().mockResolvedValue({ id: '1', status: OrderStatus.PENDING }),
-      save: jest.fn().mockResolvedValue({ id: '1', status: OrderStatus.CANCELLED }),
-    } as unknown as jest.Mocked<OrderRepository>;
+  it('should update order status to cancelled and save it', async () => {
+    const orderId = '123';
+    const order: Order = {
+      id: orderId,
+      status: OrderStatus.PENDING,
+    };
 
-    const module: TestingModule =
-      await Test.createTestingModule({
-        providers: [
-          OrderService,
-          { provide: OrderRepository, useValue: orderRepositoryMock },
-        ],
-      }).compile();
+    orderRepositoryMock.findById.mockResolvedValue(order);
+    orderRepositoryMock.save.mockResolvedValue(order);
 
-    service = module.get<OrderService>(OrderService);
+    await expect(service.cancelOrder(orderId)).resolves.toEqual(order);
   });
-
-  it.skip('should throw BadRequestException if order is already cancelled', async () => {
-          const mockOrderRepository = {
-            save: jest.fn().mockResolvedValueOnce({ id: '1', status: OrderStatus.CANCELLED }),
-          };
-
-          const service = new OrderService(mockOrderRepository);
-
-          await expect(service.cancelOrder('1')).rejects.toThrow(BadRequestException);
-        });
-
-
-  it.skip('should cancel the order and save it', async () => {
-        await service.cancelOrder('1');
-        expect(orderRepositoryMock.save).toHaveBeenCalledWith({ id: '1', status: OrderStatus.CANCELLED });
-      });
+})
 });
+
+  describe('FN_updateOrder_END', () => {
+describe('updateOrder', () => {
+  it('should throw BadRequestException if order status is CANCELLED or COMPLETED', async () => {
+    const order = {
+      id: '1',
+      status: OrderStatus.CANCELLED,
+    } as Order;
+
+    jest.spyOn(orderRepositoryMock, 'findById').mockResolvedValue(order);
+
+    await expect(service.updateOrder('1', { requestedBy: 'John' })).rejects.toThrow(
+      new BadRequestException(`Cannot update order with status ${order.status}`),
+    );
+  });
+
+  it('should throw BadRequestException if order status is IN_PROGRESS and requestedBy is provided', async () => {
+    const order = {
+      id: '1',
+      status: OrderStatus.IN_PROGRESS,
+    } as Order;
+
+    jest.spyOn(orderRepositoryMock, 'findById').mockResolvedValue(order);
+
+    await expect(service.updateOrder('1', { requestedBy: 'John' })).rejects.toThrow(
+      new BadRequestException(
+        'Cannot update requestedBy for an order in progress. Only notes can be updated',
+      ),
+    );
+  });
+
+  it('should update requestedBy if provided', async () => {
+    const order = {
+      id: '1',
+      status: OrderStatus.PENDING,
+    } as Order;
+
+    jest.spyOn(orderRepositoryMock, 'findById').mockResolvedValue(order);
+
+    await service.updateOrder('1', { requestedBy: 'John' });
+
+    expect(orderRepositoryMock.save).toHaveBeenCalledWith({
+      ...order,
+      requestedBy: 'John',
+    });
+  });
+
+  it('should update notes if provided', async () => {
+    const order = {
+      id: '1',
+      status: OrderStatus.PENDING,
+    } as Order;
+
+    jest.spyOn(orderRepositoryMock, 'findById').mockResolvedValue(order);
+
+    await service.updateOrder('1', { notes: 'New notes' });
+
+    expect(orderRepositoryMock.save).toHaveBeenCalledWith({
+      ...order,
+      notes: 'New notes',
+    });
+  });
+
+  it('should update both requestedBy and notes if provided', async () => {
+    const order = {
+      id: '1',
+      status: OrderStatus.PENDING,
+    } as Order;
+
+    jest.spyOn(orderRepositoryMock, 'findById').mockResolvedValue(order);
+
+    await service.updateOrder('1', { requestedBy: 'John', notes: 'New notes' });
+
+    expect(orderRepositoryMock.save).toHaveBeenCalledWith({
+      ...order,
+      requestedBy: 'John',
+      notes: 'New notes',
+    });
+  });
+})
 });
 
   // TESTS_APPEND_HERE

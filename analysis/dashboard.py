@@ -24,12 +24,29 @@ st.set_page_config(page_title="TCC Experimental Dashboard", layout="wide")
 
 @st.cache_data
 def get_results() -> pd.DataFrame:
-    return ea.load_results()
+    # enforce_single_run=False: this dashboard implements its own run
+    # selector (see sidebar_filters below), so it needs every run_id
+    # present, not just one -- see load_results' docstring.
+    return ea.load_results(enforce_single_run=False)
 
 
 @st.cache_data
 def get_mutation() -> pd.DataFrame:
+    # enforce_single_run stays True (the default) here, deliberately unlike
+    # get_results/get_errors_raw: mutation/smell post-processing is a
+    # separate command launched after generation (see CLAUDE.md, "Run
+    # identity and reproducibility"), so its run_id legitimately does not
+    # have to equal the generation run_id selected in the sidebar -- only
+    # to be internally single-valued, which _enforce_single_run already
+    # guarantees (auto-selects if one run_id, raises if more than one).
+    # Cross-filtering this by the results-selected run_id would wrongly
+    # blank the tab out whenever mutation was run under its own run_id.
     return ea.load_mutation_results()
+
+
+@st.cache_data
+def get_function_mutation() -> pd.DataFrame:
+    return ea.load_function_mutation_results()
 
 
 @st.cache_data
@@ -39,7 +56,7 @@ def get_smell() -> pd.DataFrame:
 
 @st.cache_data
 def get_errors_raw() -> pd.DataFrame:
-    return ea.load_error_events()
+    return ea.load_error_events(enforce_single_run=False)
 
 
 @st.cache_data
@@ -177,7 +194,7 @@ def section_strategy_comparison(df: pd.DataFrame) -> None:
     st.caption("Média não ponderada entre modelos, por estratégia -- diagnóstico, não um ranking definitivo.")
 
 
-def section_complexity(df: pd.DataFrame, smell: pd.DataFrame) -> None:
+def section_complexity(df: pd.DataFrame, smell: pd.DataFrame, function_mutation: pd.DataFrame) -> None:
     st.header("4. Complexity analysis (H2)")
     st.caption(
         "H2: a qualidade dos testes gerados diminui com a complexidade ciclomática, mais "
@@ -225,13 +242,32 @@ def section_complexity(df: pd.DataFrame, smell: pd.DataFrame) -> None:
     else:
         st.info("Sem dados de smell disponíveis para os filtros selecionados.")
 
-    st.subheader("Por que mutation score não é usado para H2")
+    st.subheader("Mutation score por faixa de CCM (evidência complementar de H2)")
     st.caption(
-        "mutation_results.csv é uma linha por (modelo, estratégia, módulo) -- um módulo "
-        "abrange várias faixas de CCM (ex.: 'encounter' tem funções de 1-5 e de >20), então "
-        "não existe um mapeamento válido de mutation score para uma faixa de CCM individual "
-        "sem fabricar dados nunca medidos nessa granularidade."
+        "mutation_results.csv (módulo) NÃO é usado aqui -- um módulo abrange várias faixas de "
+        "CCM. Esta tabela vem de mutation_function_results.csv, que mapeia cada mutante Stryker "
+        "à função-alvo que o contém (location), não ao módulo inteiro -- ver CLAUDE.md. "
+        "mutation_score_corrected é ponderado por mutante (soma antes de dividir), nunca a média "
+        "não ponderada das taxas por função. distinct_functions é o tamanho amostral da célula: "
+        "11-20 e >20 têm poucas funções distintas (5 e 3 de 25)."
     )
+    h2_mutation = ea.build_h2_mutation_by_ccm_model(function_mutation) if not function_mutation.empty else pd.DataFrame()
+    if not h2_mutation.empty:
+        small_n_mut = h2_mutation[h2_mutation["distinct_functions"].fillna(0) <= 3]
+        if not small_n_mut.empty:
+            st.warning(
+                "Células com poucas funções distintas (≤ 3): "
+                + ", ".join(
+                    f"{row.model}/{row.ccm_band} ({int(row.distinct_functions)} funções, "
+                    f"{int(row.mutants_total)} mutantes)"
+                    for row in small_n_mut.itertuples()
+                )
+            )
+        pivot_mut = h2_mutation.pivot(index="ccm_band", columns="model", values="mutation_score_corrected")
+        st.bar_chart(pivot_mut)
+        st.dataframe(h2_mutation, use_container_width=True)
+    else:
+        st.info("Sem dados de mutação por função disponíveis para os filtros selecionados.")
 
 
 def section_function_explorer(df: pd.DataFrame) -> None:
@@ -284,7 +320,7 @@ def section_errors_and_repairs(errors: pd.DataFrame) -> None:
         )
 
 
-def section_mutation(mutation: pd.DataFrame) -> None:
+def section_mutation(mutation: pd.DataFrame, function_mutation: pd.DataFrame) -> None:
     st.header("7. Mutation analysis")
     if mutation.empty:
         st.info("Sem resultados de mutação disponíveis.")
@@ -293,7 +329,9 @@ def section_mutation(mutation: pd.DataFrame) -> None:
     st.caption(
         "mutation_score_corrected: killed / (killed+survived+no_coverage+timeout); "
         "compile_error excluído do denominador. mutation_score_stryker_unweighted_mean é o valor "
-        "original (média não ponderada por módulo, sem no_coverage) -- mantido só para rastreabilidade."
+        "original (média não ponderada por módulo, sem no_coverage) -- mantido só para rastreabilidade. "
+        "Esta seção é por MÓDULO (mutation_results.csv); ver a aba Complexity analysis para a "
+        "quebra por FUNÇÃO x faixa de CCM (mutation_function_results.csv)."
     )
     chart_df = summary.copy()
     chart_df["group"] = chart_df["model"] + " / " + chart_df["strategy"]
@@ -307,6 +345,24 @@ def section_mutation(mutation: pd.DataFrame) -> None:
         st.subheader("Participação de mutantes sem cobertura (no_coverage_share)")
         st.bar_chart(chart_df[["no_coverage_share"]])
     st.dataframe(summary, use_container_width=True)
+
+    if not function_mutation.empty:
+        st.subheader("Detalhe por função (mutation_function_results.csv)")
+        st.caption(
+            "mutants_killed_by_own_tests vs. mutants_killed_by_other_function_tests: kills "
+            "atribuídos via killedBy + marcador FN_<função>_END no nome do teste -- distingue "
+            "kills pelos próprios testes da função de kills por testes de uma função irmã no "
+            "mesmo módulo."
+        )
+        fn_cols = [
+            "model", "strategy", "module", "function", "fn_id", "ccm",
+            "mutants_total", "mutants_killed", "mutants_killed_by_own_tests",
+            "mutants_killed_by_other_function_tests", "mutants_survived",
+            "mutants_no_coverage", "mutants_timeout", "mutants_unmapped_in_module",
+            "mutation_score_corrected", "no_coverage_share",
+        ]
+        available = [c for c in fn_cols if c in function_mutation.columns]
+        st.dataframe(function_mutation[available], use_container_width=True)
 
 
 def section_smells(smell: pd.DataFrame) -> None:
@@ -386,12 +442,22 @@ def main() -> None:
         if "strategy" in filtered.columns:
             errors = errors[errors["strategy"].isin(filtered["strategy"].unique())]
 
+    # mutation/smell are NOT filtered by selected_run: they are their own
+    # single-run-enforced post-processing artifacts (see get_mutation), not
+    # necessarily sharing a run_id with the generation run selected above.
     mutation = get_mutation()
     if not mutation.empty:
         if "model" in filtered.columns:
             mutation = mutation[mutation["model"].isin(filtered["model"].unique())]
         if "strategy" in filtered.columns:
             mutation = mutation[mutation["strategy"].isin(filtered["strategy"].unique())]
+
+    function_mutation = get_function_mutation()
+    if not function_mutation.empty:
+        if "model" in filtered.columns:
+            function_mutation = function_mutation[function_mutation["model"].isin(filtered["model"].unique())]
+        if "strategy" in filtered.columns:
+            function_mutation = function_mutation[function_mutation["strategy"].isin(filtered["strategy"].unique())]
 
     smell = get_smell()
     if not smell.empty:
@@ -412,13 +478,13 @@ def main() -> None:
     with tabs[2]:
         section_strategy_comparison(filtered)
     with tabs[3]:
-        section_complexity(filtered, smell)
+        section_complexity(filtered, smell, function_mutation)
     with tabs[4]:
         section_function_explorer(filtered)
     with tabs[5]:
         section_errors_and_repairs(errors)
     with tabs[6]:
-        section_mutation(mutation)
+        section_mutation(mutation, function_mutation)
     with tabs[7]:
         section_smells(smell)
     with tabs[8]:

@@ -56,43 +56,111 @@ describe('ResultService', () => {
   });
   // AUTO-GENERATED-BOOTSTRAP-END
 
-  describe('FN_searchResults_END', () => {
-describe('ResultService', () => {
-  it('should call resultRepository.search with the correct dto', async () => {
-    const dto: SearchResultsDto = {
+  describe('FN_createResult_END', () => {
+describe('createResult', () => {
+  it('should create a result and save it to the repository', async () => {
+    const dto: CreateResultDto = {
       orderId: '123',
+      value: 100,
+      unit: 'mm',
       status: ResultStatus.PRELIMINARY,
-      examType: ExamType.HEMOGRAM,
-      dateFrom: '2023-01-01',
-      dateTo: '2023-12-31',
-      sourceSystem: 'system1',
+      resultDate: '2023-10-01',
     };
 
-    await service.searchResults(dto);
+    const result: Result = {
+      id: '456',
+      orderId: '123',
+      value: 100,
+      unit: 'mm',
+      status: ResultStatus.PRELIMINARY,
+      referenceMin: null,
+      referenceMax: null,
+      resultDate: new Date('2023-10-01'),
+      sourceSystem: null,
+      notes: null,
+      created_at: new Date(),
+      updated_at: new Date(),
+      order: null,
+    };
 
-    expect(resultRepositoryMock.search).toHaveBeenCalledWith(dto);
+    resultRepositoryMock.create.mockReturnValue(result);
+    resultRepositoryMock.save.mockResolvedValue(result);
+
+    const resultEntity = await service.createResult(dto);
+
+    expect(resultEntity).toEqual(result);
+    expect(resultRepositoryMock.create).toHaveBeenCalledWith({
+      ...dto,
+      resultDate: new Date(dto.resultDate),
+      referenceMin: dto.referenceMin ?? null,
+      referenceMax: dto.referenceMax ?? null,
+      sourceSystem: dto.sourceSystem ?? null,
+      notes: dto.notes ?? null,
+    });
+    expect(resultRepositoryMock.save).toHaveBeenCalledWith(result);
   });
 
-  it.skip('should return an empty array if resultRepository.search returns undefined', async () => {
-          resultRepositoryMock.search.mockResolvedValueOnce(undefined);
+  it.skip('should throw a BadRequestException if the order ID is invalid', async () => {
+        const dto: CreateResultDto = {
+          orderId: 'invalid',
+          value: 100,
+          unit: 'mm',
+          status: ResultStatus.PRELIMINARY,
+          resultDate: '2023-10-01',
+        };
 
-          const result = await service.searchResults(dto);
+        await expect(service.createResult(dto)).rejects.toThrow(BadRequestException);
+      });
 
-          expect(result).toEqual([]);
+  it.skip('should throw a NotFoundException if the order is not found', async () => {
+          const dto: CreateResultDto = {
+            orderId: '123',
+            value: 100,
+            unit: 'mm',
+            status: ResultStatus.PRELIMINARY,
+            resultDate: '2023-10-01',
+          };
+
+          orderServiceMock.validateOrderResult.mockResolvedValueOnce(null);
+
+          await expect(service.createResult(dto)).rejects.toThrow(NotFoundException);
         });
 
 
-  it.skip('should throw a BadRequestException if dto is invalid', async () => {
-        const dto: SearchResultsDto = {
-          orderId: '123',
-          status: 'invalidStatus',
-          examType: 'invalidExamType',
-          dateFrom: '2023-01-01',
-          dateTo: '2023-12-31',
-          sourceSystem: 'system1',
-        };
+});
+});
 
-        await expect(service.searchResults(dto)).rejects.toThrow(BadRequestException);
+  describe('FN_searchResults_END', () => {
+describe('ResultService', () => {
+  let service: ResultService;
+  let resultRepositoryMock: jest.Mocked<ResultRepository>;
+
+  beforeEach(async () => {
+    resultRepositoryMock = {
+      search: jest.fn().mockResolvedValue([]),
+    } as unknown as jest.Mocked<ResultRepository>;
+
+    const module: TestingModule =
+      await Test.createTestingModule({
+        providers: [
+          ResultService,
+          { provide: ResultRepository, useValue: resultRepositoryMock },
+        ],
+      }).compile();
+
+    service = module.get<ResultService>(ResultService);
+  });
+
+  it.skip('should return an empty array when no results are found', async () => {
+        const dto: SearchResultsDto = {};
+        const results = await service.searchResults(dto);
+        expect(results).toEqual([]);
+      });
+
+  it.skip('should call the resultRepository.search method with the correct dto', async () => {
+        const dto: SearchResultsDto = { orderId: '123' };
+        await service.searchResults(dto);
+        expect(resultRepositoryMock.search).toHaveBeenCalledWith(dto);
       });
 });
 });
@@ -122,226 +190,84 @@ describe('ResultService', () => {
     service = module.get<ResultService>(ResultService);
   });
 
-  it.skip('should throw BadRequestException if status is CORRECTED and dto.status is defined', async () => {
-        const id = '123';
-        const dto: UpdateResultDto = { status: ResultStatus.CORRECTED };
-        await expect(service.updateResult(id, dto)).rejects.toThrowError(
-          new BadRequestException(
-            'Cannot change status of a CORRECTED result — it is terminal',
-          ),
+  it.skip('should throw BadRequestException if status is CORRECTED and dto.status is provided', async () => {
+        const result = { status: ResultStatus.CORRECTED } as Result;
+        resultRepositoryMock.findById.mockResolvedValue(result);
+
+        await expect(() => service.updateResult('1', { status: ResultStatus.FINAL })).rejects.toThrowError(
+          new BadRequestException('Cannot change status of a CORRECTED result — it is terminal'),
         );
       });
 
-  it.skip('should throw BadRequestException if status transition is invalid', async () => {
-        const id = '123';
-        const dto: UpdateResultDto = { status: ResultStatus.FINAL };
-        const result: Result = {
-          id: '123',
-          orderId: '456',
-          value: 100,
-          unit: 'cm',
-          status: ResultStatus.PRELIMINARY,
-          referenceMin: 50,
-          referenceMax: 150,
-          resultDate: new Date(),
-          sourceSystem: 'system1',
-          notes: 'notes',
-          created_at: new Date(),
-          updated_at: new Date(),
-          order: {
-            id: '456',
-            examType: ExamType.MEDICAL,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
-        };
+  it.skip('should throw BadRequestException if dto.status is invalid for the current result status', async () => {
+        const result = { status: ResultStatus.PRELIMINARY } as Result;
         resultRepositoryMock.findById.mockResolvedValue(result);
 
-        await expect(service.updateResult(id, dto)).rejects.toThrowError(
-          new BadRequestException(
-            `Invalid status transition from PRELIMINARY to FINAL`,
-          ),
+        await expect(() => service.updateResult('1', { status: ResultStatus.FINAL })).rejects.toThrowError(
+          new BadRequestException('Invalid status transition from PRELIMINARY to FINAL'),
         );
       });
 
-  it.skip('should throw BadRequestException if value is undefined and result status is not PRELIMINARY', async () => {
-        const id = '123';
-        const dto: UpdateResultDto = { value: undefined };
-        const result: Result = {
-          id: '123',
-          orderId: '456',
-          value: 100,
-          unit: 'cm',
-          status: ResultStatus.PRELIMINARY,
-          referenceMin: 50,
-          referenceMax: 150,
-          resultDate: new Date(),
-          sourceSystem: 'system1',
-          notes: 'notes',
-          created_at: new Date(),
-          updated_at: new Date(),
-          order: {
-            id: '456',
-            examType: ExamType.MEDICAL,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
-        };
+  it.skip('should throw BadRequestException if dto.value is provided for a non-preliminary result', async () => {
+        const result = { status: ResultStatus.FINAL } as Result;
         resultRepositoryMock.findById.mockResolvedValue(result);
 
-        await expect(service.updateResult(id, dto)).rejects.toThrowError(
+        await expect(() => service.updateResult('1', { value: 100 })).rejects.toThrowError(
           new BadRequestException('Cannot update value of a non-preliminary result'),
         );
       });
 
-  it.skip('should throw BadRequestException if unit is undefined and result status is not PRELIMINARY', async () => {
-        const id = '123';
-        const dto: UpdateResultDto = { unit: undefined };
-        const result: Result = {
-          id: '123',
-          orderId: '456',
-          value: 100,
-          unit: 'cm',
-          status: ResultStatus.PRELIMINARY,
-          referenceMin: 50,
-          referenceMax: 150,
-          resultDate: new Date(),
-          sourceSystem: 'system1',
-          notes: 'notes',
-          created_at: new Date(),
-          updated_at: new Date(),
-          order: {
-            id: '456',
-            examType: ExamType.MEDICAL,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
-        };
+  it.skip('should throw BadRequestException if dto.unit is provided for a non-preliminary result', async () => {
+        const result = { status: ResultStatus.FINAL } as Result;
         resultRepositoryMock.findById.mockResolvedValue(result);
 
-        await expect(service.updateResult(id, dto)).rejects.toThrowError(
+        await expect(() => service.updateResult('1', { unit: 'cm' })).rejects.toThrowError(
           new BadRequestException('Cannot update unit of a non-preliminary result'),
         );
       });
 
-  it.skip('should throw BadRequestException if referenceMin is undefined and result status is FINAL', async () => {
-        const id = '123';
-        const dto: UpdateResultDto = { referenceMin: undefined };
-        const result: Result = {
-          id: '123',
-          orderId: '456',
-          value: 100,
-          unit: 'cm',
-          status: ResultStatus.FINAL,
-          referenceMin: 50,
-          referenceMax: 150,
-          resultDate: new Date(),
-          sourceSystem: 'system1',
-          notes: 'notes',
-          created_at: new Date(),
-          updated_at: new Date(),
-          order: {
-            id: '456',
-            examType: ExamType.MEDICAL,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
-        };
+  it.skip('should throw BadRequestException if dto.referenceMin is provided for a final result', async () => {
+        const result = { status: ResultStatus.FINAL } as Result;
         resultRepositoryMock.findById.mockResolvedValue(result);
 
-        await expect(service.updateResult(id, dto)).rejects.toThrowError(
+        await expect(() => service.updateResult('1', { referenceMin: 100 })).rejects.toThrowError(
           new BadRequestException('Cannot update referenceMin of a final result'),
         );
       });
 
-  it.skip('should throw BadRequestException if referenceMax is undefined and result status is FINAL', async () => {
-        const id = '123';
-        const dto: UpdateResultDto = { referenceMax: undefined };
-        const result: Result = {
-          id: '123',
-          orderId: '456',
-          value: 100,
-          unit: 'cm',
-          status: ResultStatus.FINAL,
-          referenceMin: 50,
-          referenceMax: 150,
-          resultDate: new Date(),
-          sourceSystem: 'system1',
-          notes: 'notes',
-          created_at: new Date(),
-          updated_at: new Date(),
-          order: {
-            id: '456',
-            examType: ExamType.MEDICAL,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
-        };
+  it.skip('should throw BadRequestException if dto.referenceMax is provided for a final result', async () => {
+        const result = { status: ResultStatus.FINAL } as Result;
         resultRepositoryMock.findById.mockResolvedValue(result);
 
-        await expect(service.updateResult(id, dto)).rejects.toThrowError(
+        await expect(() => service.updateResult('1', { referenceMax: 100 })).rejects.toThrowError(
           new BadRequestException('Cannot update referenceMax of a final result'),
         );
       });
 
   it.skip('should throw BadRequestException if newMin is greater than or equal to newMax', async () => {
-        const id = '123';
-        const dto: UpdateResultDto = { referenceMin: 100, referenceMax: 50 };
-        const result: Result = {
-          id: '123',
-          orderId: '456',
-          value: 100,
-          unit: 'cm',
-          status: ResultStatus.PRELIMINARY,
-          referenceMin: 50,
-          referenceMax: 150,
-          resultDate: new Date(),
-          sourceSystem: 'system1',
-          notes: 'notes',
-          created_at: new Date(),
-          updated_at: new Date(),
-          order: {
-            id: '456',
-            examType: ExamType.MEDICAL,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
-        };
+        const result = { status: ResultStatus.PRELIMINARY } as Result;
         resultRepositoryMock.findById.mockResolvedValue(result);
 
-        await expect(service.updateResult(id, dto)).rejects.toThrowError(
+        await expect(() => service.updateResult('1', { referenceMin: 100, referenceMax: 50 })).rejects.toThrowError(
           new BadRequestException('referenceMin must be less than referenceMax'),
         );
       });
 
-  it.skip('should update result correctly', async () => {
-        const id = '123';
-        const dto: UpdateResultDto = { status: ResultStatus.FINAL, value: 200, unit: 'm' };
-        const result: Result = {
-          id: '123',
-          orderId: '456',
-          value: 100,
-          unit: 'cm',
-          status: ResultStatus.PRELIMINARY,
-          referenceMin: 50,
-          referenceMax: 150,
-          resultDate: new Date(),
-          sourceSystem: 'system1',
-          notes: 'notes',
-          created_at: new Date(),
-          updated_at: new Date(),
-          order: {
-            id: '456',
-            examType: ExamType.MEDICAL,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
-        };
-        resultRepositoryMock.findById.mockResolvedValue(result);
-        resultRepositoryMock.save.mockResolvedValue(result);
+  it.skip('should update the result with provided dto fields', async () => {
+          const result = { status: ResultStatus.PRELIMINARY } as Result;
+          resultRepositoryMock.findById.mockResolvedValue(result);
+          orderServiceMock.findById.mockResolvedValue({ id: '1' });
 
-        await expect(service.updateResult(id, dto)).resolves.toEqual(result);
-      });
+          await service.updateResult('1', { status: ResultStatus.FINAL, value: 100, unit: 'cm' });
+
+          expect(resultRepositoryMock.save).toHaveBeenCalledWith({
+            id: '1',
+            status: ResultStatus.FINAL,
+            value: 100,
+            unit: 'cm',
+          });
+        });
+
 });
 });
 

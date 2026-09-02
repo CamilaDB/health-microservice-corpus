@@ -1,4 +1,4 @@
 strategy,total_events,functions_observed,distinct_attempts_logged,events_per_function,events_per_attempt
-few_shot,162,16,81,10.12,2.0
-structured,208,18,100,11.56,2.08
-zero_shot,315,25,191,12.6,1.65
+few_shot,329,22,209,14.95,1.57
+structured,391,20,192,19.55,2.04
+zero_shot,474,23,238,20.61,1.99

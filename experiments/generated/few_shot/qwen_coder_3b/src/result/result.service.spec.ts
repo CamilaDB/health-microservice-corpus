@@ -62,46 +62,67 @@ describe('createResult', () => {
         orderServiceMock.validateOrderResult.mockResolvedValueOnce(null);
 
         await expect(
-          service.createResult({ orderId: '1', status: ResultStatus.PRELIMINARY } as CreateResultDto),
+          service.createResult({ orderId: '1', value: 10, unit: 'mm' } as CreateResultDto),
         ).rejects.toThrow(NotFoundException);
 
         expect(resultRepositoryMock.create).not.toHaveBeenCalled();
         expect(resultRepositoryMock.save).not.toHaveBeenCalled();
       });
 
-  it.skip('should throw BadRequestException when order is inactive', async () => {
-        orderServiceMock.validateOrderResult.mockResolvedValueOnce({ id: '1', active: false });
+  it.skip('should throw BadRequestException when order is not valid', async () => {
+        orderServiceMock.validateOrderResult.mockResolvedValueOnce({ id: '1', status: ResultStatus.PRELIMINARY });
 
         await expect(
-          service.createResult({ orderId: '1', status: ResultStatus.PRELIMINARY } as CreateResultDto),
+          service.createResult({ orderId: '1', value: 10, unit: 'mm' } as CreateResultDto),
         ).rejects.toThrow(BadRequestException);
 
         expect(resultRepositoryMock.create).not.toHaveBeenCalled();
         expect(resultRepositoryMock.save).not.toHaveBeenCalled();
       });
 
-  it.skip('should save and return the created entity', async () => {
-        orderServiceMock.validateOrderResult.mockResolvedValueOnce({ id: '1', active: true });
+  it.skip('should save and return the created result', async () => {
+        orderServiceMock.validateOrderResult.mockResolvedValueOnce({ id: '1', status: ResultStatus.FINAL });
 
-        const createdEntity = { orderId: '1', status: ResultStatus.PRELIMINARY };
-        resultRepositoryMock.create.mockReturnValueOnce(createdEntity);
-        resultRepositoryMock.save.mockResolvedValueOnce({ id: '1', ...createdEntity });
+        const createdResult = { orderId: '1', value: 10, unit: 'mm' };
+        resultRepositoryMock.create.mockReturnValueOnce(createdResult);
+        resultRepositoryMock.save.mockResolvedValueOnce({ id: '1', ...createdResult });
 
-        await service.createResult({ orderId: '1', status: ResultStatus.PRELIMINARY } as CreateResultDto);
+        await service.createResult({ orderId: '1', value: 10, unit: 'mm' } as CreateResultDto);
 
-        expect(resultRepositoryMock.create).toHaveBeenCalledWith({ orderId: '1', status: ResultStatus.PRELIMINARY });
-        expect(resultRepositoryMock.save).toHaveBeenCalledWith(createdEntity);
+        expect(resultRepositoryMock.create).toHaveBeenCalledWith({
+          orderId: '1',
+          value: 10,
+          unit: 'mm',
+          resultDate: new Date(),
+          referenceMin: null,
+          referenceMax: null,
+          sourceSystem: null,
+          notes: null,
+        });
+        expect(resultRepositoryMock.save).toHaveBeenCalledWith(createdResult);
       });
 });
 });
 
   describe('FN_searchResults_END', () => {
 describe('searchResults', () => {
-  it('should call resultRepository.search with the provided dto', async () => {
-    const dto: SearchResultsDto = { orderId: '1', status: ResultStatus.PRELIMINARY };
-    const result = await service.searchResults(dto);
+  it('should return an empty array when no results are found', async () => {
+    resultRepositoryMock.search.mockResolvedValueOnce([]);
 
-    expect(resultRepositoryMock.search).toHaveBeenCalledWith(dto);
+    const results = await service.searchResults({} as SearchResultsDto);
+
+    expect(results).toEqual([]);
+    expect(resultRepositoryMock.search).toHaveBeenCalledWith({});
+  });
+
+  it('should return the results when they are found', async () => {
+    const results = [{ id: '1', orderId: '2', value: 100, unit: 'mg/dL', status: ResultStatus.PRELIMINARY, referenceMin: null, referenceMax: null, resultDate: new Date(), sourceSystem: null, notes: null, created_at: new Date(), updated_at: new Date(), order: { id: '2', name: 'Test Order' } }];
+    resultRepositoryMock.search.mockResolvedValueOnce(results);
+
+    const result = await service.searchResults({ orderId: '2' } as SearchResultsDto);
+
+    expect(result).toEqual(results);
+    expect(resultRepositoryMock.search).toHaveBeenCalledWith({ orderId: '2' });
   });
 });
 });
@@ -115,7 +136,7 @@ describe('getResultById', () => {
   });
 
   it('should return the result when found', async () => {
-    const result = { id: '1', orderId: '2', value: 100, unit: 'mm', status: ResultStatus.PRELIMINARY, referenceMin: null, referenceMax: null, resultDate: new Date(), sourceSystem: null, notes: null, created_at: new Date(), updated_at: new Date(), order: { id: '2', examType: ExamType.PHYSICAL } };
+    const result = { id: '1', orderId: '1', value: 100, unit: 'cm', status: ResultStatus.PRELIMINARY, referenceMin: null, referenceMax: null, resultDate: new Date(), sourceSystem: null, notes: null, created_at: new Date(), updated_at: new Date(), order: { id: '1', examType: ExamType.AXIAL } };
     resultRepositoryMock.findById.mockResolvedValueOnce(result);
 
     const resultById = await service.getResultById('1');
@@ -128,17 +149,15 @@ describe('getResultById', () => {
   describe('FN_buildResultReport_END', () => {
 describe('buildResultReport', () => {
   it.skip('should throw NotFoundException when order does not exist', async () => {
-        orderServiceMock.getOrderById.mockResolvedValueOnce(null);
+          orderServiceMock.getOrderById.mockResolvedValueOnce(null);
 
-        await expect(
-          service.buildResultReport('1'),
-        ).rejects.toThrow(NotFoundException);
+          await expect(
+            service.buildResultReport('1'),
+          ).rejects.toThrow(NotFoundException);
 
-        expect(resultRepositoryMock.findByOrderId).not.toHaveBeenCalled();
-        expect(resultRepositoryMock.search).not.toHaveBeenCalled();
-        expect(resultRepositoryMock.save).not.toHaveBeenCalled();
-        expect(resultRepositoryMock.create).not.toHaveBeenCalled();
-      });
+          expect(resultRepositoryMock.findByOrderId).toHaveBeenCalledWith('1');
+        });
+
 
   it('should throw NotFoundException when no results are found for order', async () => {
     orderServiceMock.getOrderById.mockResolvedValueOnce({ id: '1' });
@@ -149,89 +168,70 @@ describe('buildResultReport', () => {
     ).rejects.toThrow(NotFoundException);
 
     expect(resultRepositoryMock.findByOrderId).toHaveBeenCalledWith('1');
-    expect(resultRepositoryMock.search).not.toHaveBeenCalled();
-    expect(resultRepositoryMock.save).not.toHaveBeenCalled();
-    expect(resultRepositoryMock.create).not.toHaveBeenCalled();
   });
 
-  it('should return the result report when order and results are found', async () => {
-    const order = { id: '1' };
-    const results = [
-      { id: '1', status: ResultStatus.PRELIMINARY },
-      { id: '2', status: ResultStatus.FINAL },
-      { id: '3', status: ResultStatus.CORRECTED },
-    ];
-    const defaultRanges: Partial<
-      Record<ExamType, { min: number; max: number }>
-    > = {
-      [ExamType.GLUCOSE]: { min: 70, max: 99 },
-      [ExamType.CREATININE]: { min: 0.6, max: 1.2 },
-      [ExamType.TSH]: { min: 0.4, max: 4.0 },
-    };
-    const summary = {
-      total: 3,
-      preliminary: 1,
-      final: 1,
-      corrected: 1,
-      abnormal: 0,
-    };
-    const items: ResultReportItem[] = results.map((result) => {
-      const refMin =
-        result.referenceMin !== null
-          ? Number(result.referenceMin)
-          : (defaultRanges[order.examType]?.min ?? null);
-      const refMax =
-        result.referenceMax !== null
-          ? Number(result.referenceMax)
-          : (defaultRanges[order.examType]?.max ?? null);
-      const value = Number(result.value);
-      let flag: 'LOW' | 'NORMAL' | 'HIGH' | 'UNKNOWN';
-      if (refMin === null && refMax === null) {
-        flag = 'UNKNOWN';
-      } else if (refMin !== null && value < refMin) {
-        flag = 'LOW';
-      } else if (refMax !== null && value > refMax) {
-        flag = 'HIGH';
-      } else {
-        flag = 'NORMAL';
-      }
-      if (flag === 'LOW' || flag === 'HIGH') summary.abnormal++;
-      return {
-        resultId: result.id,
-        examType: order.examType,
-        value,
-        unit: result.unit,
-        status: result.status,
-        referenceMin: refMin,
-        referenceMax: refMax,
-        flag,
-        sourceSystem: result.sourceSystem,
-        resultDate: result.resultDate,
-      };
-    });
-    resultRepositoryMock.findByOrderId.mockResolvedValueOnce(results);
-    orderServiceMock.getOrderById.mockResolvedValueOnce(order);
+  it.skip('should return the result report with summary and items', async () => {
+        const order = { id: '1', examType: ExamType.GLUCOSE };
+        const result1 = { id: '1', status: ResultStatus.PRELIMINARY, value: 80 };
+        const result2 = { id: '2', status: ResultStatus.FINAL, value: 100 };
+        const results = [result1, result2];
+        const defaultRanges = {
+          [ExamType.GLUCOSE]: { min: 70, max: 99 },
+        };
+        const summary = {
+          total: 2,
+          preliminary: 1,
+          final: 1,
+          corrected: 0,
+          abnormal: 0,
+        };
+        const items = [
+          {
+            resultId: result1.id,
+            examType: order.examType,
+            value: result1.value,
+            unit: result1.unit,
+            status: result1.status,
+            referenceMin: defaultRanges[order.examType]?.min ?? null,
+            referenceMax: defaultRanges[order.examType]?.max ?? null,
+            flag: 'NORMAL',
+            sourceSystem: result1.sourceSystem,
+            resultDate: result1.resultDate,
+          },
+          {
+            resultId: result2.id,
+            examType: order.examType,
+            value: result2.value,
+            unit: result2.unit,
+            status: result2.status,
+            referenceMin: defaultRanges[order.examType]?.min ?? null,
+            referenceMax: defaultRanges[order.examType]?.max ?? null,
+            flag: 'HIGH',
+            sourceSystem: result2.sourceSystem,
+            resultDate: result2.resultDate,
+          },
+        ];
 
-    const resultReport = await service.buildResultReport('1');
+        orderServiceMock.getOrderById.mockResolvedValueOnce(order);
+        resultRepositoryMock.findByOrderId.mockResolvedValueOnce(results);
 
-    expect(resultReport).toEqual({
-      orderId: '1',
-      examType: order.examType,
-      items,
-      summary,
-    });
+        const resultReport = await service.buildResultReport('1');
 
-    expect(resultRepositoryMock.findByOrderId).toHaveBeenCalledWith('1');
-    expect(resultRepositoryMock.search).not.toHaveBeenCalled();
-    expect(resultRepositoryMock.save).not.toHaveBeenCalled();
-    expect(resultRepositoryMock.create).not.toHaveBeenCalled();
-  });
+        expect(resultReport).toEqual({
+          orderId: '1',
+          examType: ExamType.GLUCOSE,
+          items,
+          summary,
+        });
+
+        expect(resultRepositoryMock.findByOrderId).toHaveBeenCalledWith('1');
+      });
 });
 });
 
   describe('FN_updateResult_END', () => {
 describe('updateResult', () => {
-  it('should throw BadRequestException when result status is CORRECTED and status is provided', async () => {
+  it('should throw BadRequestException when status is CORRECTED and dto.status is defined', async () => {
     resultRepositoryMock.findById.mockResolvedValueOnce({
       id: '1',
       status: ResultStatus.CORRECTED,
@@ -244,21 +244,20 @@ describe('updateResult', () => {
     expect(resultRepositoryMock.save).not.toHaveBeenCalled();
   });
 
-  it.skip('should throw BadRequestException when status transition is invalid', async () => {
-          resultRepositoryMock.findById.mockResolvedValueOnce({
-            id: '1',
-            status: ResultStatus.PRELIMINARY,
-          });
-
-          await expect(
-            service.updateResult('1', { status: ResultStatus.CORRECTED } as UpdateResultDto),
-          ).rejects.toThrow(BadRequestException);
-
-          expect(resultRepositoryMock.save).not.toHaveBeenCalled();
+  it.skip('should throw BadRequestException when invalid status transition is attempted', async () => {
+        resultRepositoryMock.findById.mockResolvedValueOnce({
+          id: '1',
+          status: ResultStatus.PRELIMINARY,
         });
 
+        await expect(
+          service.updateResult('1', { status: ResultStatus.FINAL } as UpdateResultDto),
+        ).rejects.toThrow(BadRequestException);
 
-  it('should throw BadRequestException when value is provided for non-preliminary result', async () => {
+        expect(resultRepositoryMock.save).not.toHaveBeenCalled();
+      });
+
+  it('should throw BadRequestException when value is updated for a non-preliminary result', async () => {
     resultRepositoryMock.findById.mockResolvedValueOnce({
       id: '1',
       status: ResultStatus.FINAL,
@@ -271,20 +270,20 @@ describe('updateResult', () => {
     expect(resultRepositoryMock.save).not.toHaveBeenCalled();
   });
 
-  it('should throw BadRequestException when unit is provided for non-preliminary result', async () => {
+  it('should throw BadRequestException when unit is updated for a non-preliminary result', async () => {
     resultRepositoryMock.findById.mockResolvedValueOnce({
       id: '1',
       status: ResultStatus.FINAL,
     });
 
     await expect(
-      service.updateResult('1', { unit: 'cm' } as UpdateResultDto),
+      service.updateResult('1', { unit: 'newUnit' } as UpdateResultDto),
     ).rejects.toThrow(BadRequestException);
 
     expect(resultRepositoryMock.save).not.toHaveBeenCalled();
   });
 
-  it('should throw BadRequestException when referenceMin is provided for final result', async () => {
+  it('should throw BadRequestException when referenceMin is updated for a final result', async () => {
     resultRepositoryMock.findById.mockResolvedValueOnce({
       id: '1',
       status: ResultStatus.FINAL,
@@ -297,7 +296,7 @@ describe('updateResult', () => {
     expect(resultRepositoryMock.save).not.toHaveBeenCalled();
   });
 
-  it('should throw BadRequestException when referenceMax is provided for final result', async () => {
+  it('should throw BadRequestException when referenceMax is updated for a final result', async () => {
     resultRepositoryMock.findById.mockResolvedValueOnce({
       id: '1',
       status: ResultStatus.FINAL,
@@ -323,89 +322,20 @@ describe('updateResult', () => {
     expect(resultRepositoryMock.save).not.toHaveBeenCalled();
   });
 
-  it('should update result status and save it', async () => {
-    resultRepositoryMock.findById.mockResolvedValueOnce({
+  it('should update the result with valid data', async () => {
+    const result = { id: '1', status: ResultStatus.PRELIMINARY };
+    resultRepositoryMock.findById.mockResolvedValueOnce(result);
+    resultRepositoryMock.save.mockResolvedValueOnce({ id: '1', ...result });
+
+    await service.updateResult('1', { status: ResultStatus.FINAL, value: 10, unit: 'newUnit' } as UpdateResultDto);
+
+    expect(resultRepositoryMock.save).toHaveBeenCalledWith({
       id: '1',
-      status: ResultStatus.PRELIMINARY,
+      status: ResultStatus.FINAL,
+      value: 10,
+      unit: 'newUnit',
     });
-
-    const updateData = { status: ResultStatus.FINAL };
-    resultRepositoryMock.save.mockResolvedValueOnce({ id: '1', ...updateData });
-
-    await service.updateResult('1', updateData as UpdateResultDto);
-
-    expect(resultRepositoryMock.save).toHaveBeenCalledWith({ id: '1', ...updateData });
   });
-
-  it.skip('should update result value and save it', async () => {
-        resultRepositoryMock.findById.mockResolvedValueOnce({
-          id: '1',
-          status: ResultStatus.PRELIMINARY,
-        });
-
-        const updateData = { value: 10 };
-        resultRepositoryMock.save.mockResolvedValueOnce({ id: '1', ...updateData });
-
-        await service.updateResult('1', updateData as UpdateResultDto);
-
-        expect(resultRepositoryMock.save).toHaveBeenCalledWith({ id: '1', ...updateData });
-      });
-
-  it.skip('should update result unit and save it', async () => {
-        resultRepositoryMock.findById.mockResolvedValueOnce({
-          id: '1',
-          status: ResultStatus.PRELIMINARY,
-        });
-
-        const updateData = { unit: 'cm' };
-        resultRepositoryMock.save.mockResolvedValueOnce({ id: '1', ...updateData });
-
-        await service.updateResult('1', updateData as UpdateResultDto);
-
-        expect(resultRepositoryMock.save).toHaveBeenCalledWith({ id: '1', ...updateData });
-      });
-
-  it.skip('should update result referenceMin and save it', async () => {
-          resultRepositoryMock.findById.mockResolvedValueOnce({
-            id: '1',
-            status: ResultStatus.PRELIMINARY,
-            referenceMin: 10,
-          });
-
-          const updateData = { referenceMin: 10 };
-          resultRepositoryMock.save.mockResolvedValueOnce({ id: '1', ...updateData });
-
-          await expect(service.updateResult('1', updateData as UpdateResultDto)).resolves.toBeDefined();
-        });
-
-
-  it('should throw BadRequestException when status is CORRECTED', async () => {
-      resultRepositoryMock.findById.mockResolvedValueOnce({
-        id: '1',
-        status: ResultStatus.CORRECTED,
-        referenceMin: 50,
-      });
-
-      await expect(service.updateResult('1', { status: ResultStatus.FINAL })).rejects.toThrow(BadRequestException);
-    });
-
-
-
-  it.skip('should update result notes and save it', async () => {
-          resultRepositoryMock.findById.mockResolvedValueOnce({
-            id: '1',
-            status: ResultStatus.PRELIMINARY,
-            notes: 'test notes',
-          });
-
-          const updateData = { notes: 'updated notes' };
-          resultRepositoryMock.save.mockResolvedValueOnce({ id: '1', ...updateData });
-
-          await service.updateResult('1', updateData as UpdateResultDto);
-
-          expect(resultRepositoryMock.save).toHaveBeenCalledWith({ id: '1', ...updateData });
-        });
-
 });
 });
 

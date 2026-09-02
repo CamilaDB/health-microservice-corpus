@@ -171,17 +171,21 @@ def normalize_content(content: str) -> str:
 # Truncation repair helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
-def count_unclosed_scopes(block: str) -> tuple[int, int, int]:
+def _scan_scope_deltas(text: str) -> tuple[int, int, int]:
     """
-    Returns:
-      (unclosed_braces, unclosed_parens, unclosed_brackets)
+    String-literal-aware net (braces, parens, brackets) delta over `text`
+    -- signed, NOT clamped: a negative value means more closing than
+    opening characters were seen (e.g. a stray extra `}`), which a
+    freshly-generated, atomically-appended block can never exhibit but a
+    post-repair full-file diff can, so callers needing that distinction
+    use this directly instead of the clamped count_unclosed_scopes below.
     """
     braces = parens = brackets = 0
     in_string = False
     string_char = None
     escape = False
 
-    for c in block:
+    for c in text:
         if in_string:
             if escape:
                 escape = False
@@ -211,7 +215,32 @@ def count_unclosed_scopes(block: str) -> tuple[int, int, int]:
         elif c == "]":
             brackets -= 1
 
+    return (braces, parens, brackets)
+
+
+def count_unclosed_scopes(block: str) -> tuple[int, int, int]:
+    """
+    Returns:
+      (unclosed_braces, unclosed_parens, unclosed_brackets)
+
+    Clamped to >= 0: designed for a single freshly-generated block, where
+    "more closes than opens" cannot legitimately occur and would only ever
+    reflect scanning noise, not a real defect worth surfacing here.
+    """
+    braces, parens, brackets = _scan_scope_deltas(block)
     return (max(0, braces), max(0, parens), max(0, brackets))
+
+
+def scope_balance(text: str) -> tuple[int, int, int]:
+    """
+    Signed (net_braces, net_parens, net_brackets) over `text`. Zero on all
+    three means the text is scope-balanced; any nonzero value (positive OR
+    negative) means it is not. Used to detect whole-file structural
+    corruption after an in-place repair patch, where an unexpected extra
+    closing character is just as much a defect as an unexpected extra
+    opening one -- unlike count_unclosed_scopes, this is not clamped.
+    """
+    return _scan_scope_deltas(text)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

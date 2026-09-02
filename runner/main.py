@@ -33,6 +33,7 @@ from execution.sandbox import (
     make_fn_id,
     normalize_content,
     remove_temp_spec,
+    scope_balance,
     snapshot_spec_file,
     validate_generated_block,
 )
@@ -305,6 +306,56 @@ def is_typescript_error(stderr: str) -> bool:
     return "error TS" in stderr
 
 
+def _restore_if_repair_corrupted_spec(
+    *,
+    generated_spec_path: Path,
+    fn_id: str,
+    pre_repair_content: str,
+    pre_repair_blocks: dict[str, str],
+) -> str | None:
+    """
+    Per-repair-attempt safety net for the runtime (per-it()-block) repair
+    path. Compares the spec file against the snapshot taken immediately
+    before this attempt's repair call and restores it if the repair left
+    the file structurally broken:
+
+      - unbalanced braces/parens/brackets anywhere in the file, or
+      - the function's own wrapper (fn_id) disappearing, or
+      - any OTHER, previously accepted function's wrapper changing.
+
+    Returns a human-readable reason when a restore happened, else None
+    (including the common case where nothing changed at all). Deliberately
+    narrow: a repair that leaves the file structurally sound but the
+    function still failing is NOT corruption -- that is the existing,
+    unchanged retry/skip policy's job, evaluated by the next Jest run as
+    before. This only guarantees the next attempt (or the next function)
+    never starts from a broken file.
+    """
+    post_repair_content = generated_spec_path.read_text(encoding="utf-8")
+    if post_repair_content == pre_repair_content:
+        return None
+
+    braces, parens, brackets = scope_balance(post_repair_content)
+    if braces or parens or brackets:
+        generated_spec_path.write_text(pre_repair_content, encoding="utf-8")
+        return f"unbalanced scopes after repair (braces={braces} parens={parens} brackets={brackets})"
+
+    post_repair_blocks = function_wrapper_blocks(post_repair_content)
+    if fn_id not in post_repair_blocks:
+        generated_spec_path.write_text(pre_repair_content, encoding="utf-8")
+        return f"repair removed the function's own wrapper (fn_id={fn_id})"
+
+    changed = [
+        other_fn_id for other_fn_id, block in pre_repair_blocks.items()
+        if other_fn_id != fn_id and post_repair_blocks.get(other_fn_id) != block
+    ]
+    if changed:
+        generated_spec_path.write_text(pre_repair_content, encoding="utf-8")
+        return f"repair modified previously accepted function wrappers: {', '.join(changed)}"
+
+    return None
+
+
 def run_runtime_repair_loop(
     *,
     client,
@@ -454,6 +505,14 @@ def run_runtime_repair_loop(
                         attempt=attempt,
                     )
 
+                # ── Per-attempt snapshot ─────────────────────────────────
+                # Taken immediately before this attempt's repair call so a
+                # structurally-corrupting patch can be reverted without
+                # touching any other attempt or function -- see
+                # _restore_if_repair_corrupted_spec.
+                pre_repair_content = generated_spec_path.read_text(encoding="utf-8")
+                pre_repair_blocks = function_wrapper_blocks(pre_repair_content)
+
                 repair_stats = repair_runtime_failure(
                     runtime_repairs=runtime_repairs,
                     client=client,
@@ -465,6 +524,33 @@ def run_runtime_repair_loop(
                     describe_name=fn_id,
                     failure_counts=failure_counts,
                 )
+
+                corruption_reason = _restore_if_repair_corrupted_spec(
+                    generated_spec_path=generated_spec_path,
+                    fn_id=fn_id,
+                    pre_repair_content=pre_repair_content,
+                    pre_repair_blocks=pre_repair_blocks,
+                )
+                if corruption_reason:
+                    logger.error(
+                        f"Runtime repair attempt={attempt} left the spec "
+                        f"structurally broken ({corruption_reason}); restored "
+                        "the pre-attempt snapshot so the next attempt starts clean."
+                    )
+                    corruption_category, corruption_subcategory = classify_pipeline_artifact_corruption()
+                    record_error_event(
+                        event_ctx,
+                        phase="pipeline",
+                        error_category=corruption_category,
+                        error_subcategory=corruption_subcategory,
+                        error_message=corruption_reason,
+                        attempt=attempt,
+                        artifact_disposition="restored",
+                    )
+                    # The reverted attempt produced no usable fix, regardless
+                    # of what repair_runtime_failure itself believed it did.
+                    repair_stats.repairs_applied = 0
+                    repair_stats.repairs_failed = max(repair_stats.repairs_failed, 1)
 
                 cumulative_repair.repair_tokens   += repair_stats.repair_tokens
                 cumulative_repair.repairs_applied += repair_stats.repairs_applied

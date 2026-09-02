@@ -61,5 +61,38 @@ describe('EncounterService', () => {
   });
   // AUTO-GENERATED-BOOTSTRAP-END
 
+  describe('FN_getEncounterById_END', () => {
+describe('getEncounterById', () => {
+  it('should throw NotFoundException when encounter does not exist', async () => {
+    encounterRepositoryMock.findById.mockResolvedValueOnce(null);
+
+    await expect(service.getEncounterById('1')).rejects.toThrow(NotFoundException);
+  });
+
+  it('should return the encounter when it exists', async () => {
+    const encounter = {
+      id: '1',
+      patientId: 'patientId',
+      adtType: AdtType.A01,
+      status: EncounterStatus.ADMITTED,
+      ward: Ward.ICU,
+      admitDate: new Date('2023-01-01'),
+      transferDate: null,
+      dischargeDate: null,
+      created_at: new Date('2023-01-01'),
+      updated_at: new Date('2023-01-01'),
+      patient: { id: 'patientId' },
+      orders: [],
+    };
+
+    encounterRepositoryMock.findById.mockResolvedValueOnce(encounter);
+
+    const result = await service.getEncounterById('1');
+
+    expect(result).toEqual(encounter);
+  });
+});
+});
+
   // TESTS_APPEND_HERE
 });

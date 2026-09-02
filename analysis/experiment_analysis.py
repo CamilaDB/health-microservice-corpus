@@ -49,6 +49,7 @@ TABLES_DIR = OUTPUT_DIR / "tables"
 FIGURES_DIR = OUTPUT_DIR / "figures"
 SMELL_RESULTS_CSV = ROOT_DIR / "experiments" / "metrics" / "smell_results.csv"
 MUTATION_RESULTS_CSV = ROOT_DIR / "experiments" / "metrics" / "mutation_results.csv"
+FUNCTION_MUTATION_RESULTS_CSV = ROOT_DIR / "experiments" / "metrics" / "mutation_function_results.csv"
 ERROR_EVENTS_CSV = ROOT_DIR / "experiments" / "metrics" / "error_events.csv"
 RUN_MANIFEST_DIR = ROOT_DIR / "experiments" / "runs"
 SMELL_OUTPUT_DIR = OUTPUT_DIR / "smell"
@@ -102,10 +103,17 @@ def _enforce_single_run(df: pd.DataFrame, label: str) -> pd.DataFrame:
     Shared run-id isolation guard. Applied identically to every loader
     (results, error events, mutation, smell) so none of them can silently
     mix observations from two different experiment runs.
+
+    No hardcoded fallback run_id: if EXPERIMENT_RUN_ID is unset and the CSV
+    holds exactly one run_id, that run is used automatically (safe -- there
+    is nothing else it could mean). If it holds more than one and
+    EXPERIMENT_RUN_ID is unset, this fails loudly rather than silently
+    picking one -- a stale default here would risk analysing the wrong run
+    the moment a second run_id ever lands in a frozen, append-only CSV.
     """
     if "run_id" not in df.columns:
         return df
-    requested_run = os.getenv("EXPERIMENT_RUN_ID", "run-20260829T234854.260375Z")
+    requested_run = os.getenv("EXPERIMENT_RUN_ID")
     run_ids = sorted(df["run_id"].dropna().astype(str).unique().tolist())
     if requested_run:
         df = df[df["run_id"].astype(str) == requested_run].copy()
@@ -123,7 +131,7 @@ def _enforce_single_run(df: pd.DataFrame, label: str) -> pd.DataFrame:
 # Primary results (results.csv)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def load_results(csv_path: Path = RESULTS_CSV) -> pd.DataFrame:
+def load_results(csv_path: Path = RESULTS_CSV, enforce_single_run: bool = True) -> pd.DataFrame:
     """
     Loads results.csv and adds two derived, analysis-only columns:
 
@@ -140,12 +148,19 @@ def load_results(csv_path: Path = RESULTS_CSV) -> pd.DataFrame:
     original semantics (jest_result exists and succeeded) are untouched;
     verified_eligible/fully_skipped are additional columns, not
     replacements.
+
+    enforce_single_run=False skips the run-id isolation guard, returning
+    every run_id present as-is -- for the dashboard's own run selector
+    (see analysis/dashboard.py), which needs the full multi-run frame to
+    populate its dropdown before the user picks one. The static report
+    (build_all_outputs / __main__) always uses the default True.
     """
     if not csv_path.exists():
         raise FileNotFoundError(f"Result CSV not found: {csv_path}")
 
     df = pd.read_csv(csv_path)
-    df = _enforce_single_run(df, "results.csv")
+    if enforce_single_run:
+        df = _enforce_single_run(df, "results.csv")
     for column in NUMERIC_COLUMNS:
         if column in df.columns:
             df[column] = pd.to_numeric(df[column], errors="coerce")
@@ -311,17 +326,20 @@ def build_ccm_band_population(df: pd.DataFrame) -> pd.DataFrame:
 #
 # Model "size" here is exactly the ordering implied by the model tags
 # already recorded in the frozen run manifest (experiments/runs/*.json,
-# "models" field) and runner/config.py -- gemma4:e2b, qwen2.5-coder:3b,
-# qwen2.5-coder:7b. No parameter count is invented: "e2b"/"3b"/"7b" are the
-# tags the experiment was actually configured and run with. They are not
-# perfectly cross-family comparable (Gemma's "effective" parameter
-# accounting differs from Qwen's raw count), so MODEL_SIZE_ORDER is used
-# only to keep a consistent, documented left-to-right ordering in figures,
-# not as a claim of precisely calibrated relative size.
+# "models" field) and runner/config.py for the final 5-model run: gemma4:e2b,
+# qwen2.5-coder:3b, qwen3.5:4b, falcon3:7b, qwen2.5-coder:7b. No parameter
+# count is invented: "e2b"/"3b"/"4b"/"7b" are the tags the experiment was
+# actually configured and run with. They are not perfectly cross-family
+# comparable (Gemma's "effective" parameter accounting differs from Qwen's
+# raw count; falcon3:7b and qwen2.5-coder:7b share the same declared tag, so
+# the two are treated as tied and ordered alphabetically by model key as an
+# explicit, documented tie-break -- not a claim that one is smaller), so
+# MODEL_SIZE_ORDER is used only to keep a consistent, documented
+# left-to-right ordering in figures, not precisely calibrated relative size.
 #
 # Statement/branch coverage (fn_statements_pct/fn_branches_pct) are
 # function-level, already present per observation in results.csv, and are
-# the chosen H2 metric (Option C) -- see the module docstring addendum
+# the primary H2 metric (Option C) -- see the module docstring addendum
 # below and the technical report for why: it is the metric that actually
 # shows a complexity-associated trend in this dataset, is not confined to
 # 25 distinct functions with no strategy detail, and is standard/
@@ -329,18 +347,31 @@ def build_ccm_band_population(df: pd.DataFrame) -> pd.DataFrame:
 # is also function-level and legitimately CCM-bandable (build_h2_smell_
 # table, below) but was found NOT to show a clear complexity trend here --
 # reported as a table and a negative finding, not forced into a chart.
-# Mutation score (Option B) is REJECTED for H2: mutation_results.csv is
-# one row per (model, strategy, module), and a module routinely spans
-# multiple CCM bands (see the technical report's module/band crosstab),
-# so no valid per-function or per-band mutation score can be derived
-# without fabricating data that was never measured at that granularity.
+# Mutation score by CCM band (build_h2_mutation_by_ccm_model, below) is
+# SUPPORTED as of mutation_function_results.csv: each mutant is mapped to
+# its containing target function via Stryker's own per-mutant `location`
+# (runner/execution/stryker_runner.py::map_mutants_to_functions), not
+# proportionally split from the module-level score, so a genuine per-
+# function and therefore per-CCM-band score exists. The module-level
+# mutation_results.csv (one row per model x strategy x module, spanning
+# multiple CCM bands per module) remains unsuitable for CCM banding on its
+# own and is not used for H2 -- only the function-level file is.
 # ─────────────────────────────────────────────────────────────────────────────
 
-MODEL_SIZE_ORDER = ["gemma_4", "qwen_coder_3b", "qwen_coder_7b"]
+MODEL_SIZE_ORDER = ["gemma_4", "qwen_coder_3b", "qwen_4b", "falcon_7b", "qwen_coder_7b"]
 MODEL_SIZE_LABELS = {
     "gemma_4": "gemma_4 (gemma4:e2b)",
     "qwen_coder_3b": "qwen_coder_3b (qwen2.5-coder:3b)",
+    "qwen_4b": "qwen_4b (qwen3.5:4b)",
+    "falcon_7b": "falcon_7b (falcon3:7b)",
     "qwen_coder_7b": "qwen_coder_7b (qwen2.5-coder:7b)",
+}
+MODEL_PALETTE = {
+    "gemma_4": "#4c956c",
+    "qwen_coder_3b": "#f2b134",
+    "qwen_4b": "#5b8dd6",
+    "falcon_7b": "#8e5ea2",
+    "qwen_coder_7b": "#c44e52",
 }
 
 
@@ -527,7 +558,7 @@ def export_summary_tables(df: pd.DataFrame) -> dict[str, Path]:
 # Test smells (smell_results.csv)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def load_smell_results(csv_path: Path = SMELL_RESULTS_CSV) -> pd.DataFrame:
+def load_smell_results(csv_path: Path = SMELL_RESULTS_CSV, enforce_single_run: bool = True) -> pd.DataFrame:
     """
     Adds a derived `measurable` column: it_active > 0. smell_runner.py
     itself already defaults assertion_roulette_rate/empty_test_rate to 0.0
@@ -535,6 +566,9 @@ def load_smell_results(csv_path: Path = SMELL_RESULTS_CSV) -> pd.DataFrame:
     indistinguishably from "measured and found zero smells". `measurable`
     lets aggregates exclude those rows instead of silently averaging them
     in as clean.
+
+    enforce_single_run=False: see load_results -- used by the dashboard's
+    own run selector.
     """
     if not csv_path.exists():
         return pd.DataFrame()
@@ -542,7 +576,8 @@ def load_smell_results(csv_path: Path = SMELL_RESULTS_CSV) -> pd.DataFrame:
     df = pd.read_csv(csv_path)
     if df.empty:
         return df
-    df = _enforce_single_run(df, "smell_results.csv")
+    if enforce_single_run:
+        df = _enforce_single_run(df, "smell_results.csv")
     for column in [
         "ccm", "it_active", "it_skip",
         "assertion_roulette_count", "empty_test_count",
@@ -622,16 +657,26 @@ def plot_smell_rates(df: pd.DataFrame, output_path: Path) -> None:
     use_df = summary[["model", "strategy", "assertion_roulette_rate", "empty_test_rate", "unmeasurable_functions"]].copy()
 
     labels = [f"{row.model}\n{row.strategy}" for _, row in use_df.iterrows()]
-    fig, ax = plt.subplots(figsize=(10, 6))
+    fig, ax = plt.subplots(figsize=(10, 6.5))
     ax.bar(labels, use_df["assertion_roulette_rate"], label="Assertion Roulette (%)")
     ax.bar(labels, use_df["empty_test_rate"], label="Empty Test (%)", alpha=0.7)
-    ax.set_title("Taxa de smells por modelo e estratégia\n(observações totalmente skip-repaired excluídas)")
+    ax.set_title(
+        "Taxa de smells por modelo e estratégia\n"
+        "(observações totalmente skip-repaired excluídas; empty_test_rate = 0% em todo o dataset)"
+    )
     ax.set_ylabel("Taxa (%) entre testes ativos")
-    ax.legend()
+    ax.set_ylim(0, max(100, float(use_df["assertion_roulette_rate"].max()) + 12))
+    ax.legend(loc="upper left", bbox_to_anchor=(1.01, 1))
     ax.grid(axis="y", linestyle="--", alpha=0.3)
     for i, excluded in enumerate(use_df["unmeasurable_functions"]):
         if excluded:
-            ax.annotate(f"-{excluded}", (i, 2), ha="center", fontsize=8, color="#666")
+            ax.annotate(f"{excluded} excl.", (i, 2), ha="center", fontsize=7, color="#666", rotation=90)
+    plt.figtext(
+        0.01, 0.01,
+        "\"N excl.\" = observações totalmente skip-repaired (não mensuráveis), excluídas do "
+        "denominador desta barra -- não uma taxa negativa.",
+        fontsize=7.5, color="#666",
+    )
     plt.xticks(rotation=45, ha="right")
     plt.tight_layout()
     fig.savefig(output_path, dpi=300, bbox_inches="tight")
@@ -673,7 +718,7 @@ def _mutation_covered_denominator(df: pd.DataFrame) -> pd.Series:
     )
 
 
-def load_mutation_results(csv_path: Path = MUTATION_RESULTS_CSV) -> pd.DataFrame:
+def load_mutation_results(csv_path: Path = MUTATION_RESULTS_CSV, enforce_single_run: bool = True) -> pd.DataFrame:
     """
     Adds two derived, coverage-inclusive columns computed from the raw,
     unmodified per-status mutant counts:
@@ -695,7 +740,8 @@ def load_mutation_results(csv_path: Path = MUTATION_RESULTS_CSV) -> pd.DataFrame
     df = pd.read_csv(csv_path)
     if df.empty:
         return df
-    df = _enforce_single_run(df, "mutation_results.csv")
+    if enforce_single_run:
+        df = _enforce_single_run(df, "mutation_results.csv")
     for column in [
         "mutation_score", "mutants_total", "mutants_killed", "mutants_survived",
         "mutants_timeout", "mutants_no_coverage", "mutants_compile_error",
@@ -767,7 +813,86 @@ def build_mutation_summary_by_model_strategy(df: pd.DataFrame) -> pd.DataFrame:
     return summary.sort_values(keys).reset_index(drop=True)[columns]
 
 
-def export_mutation_tables(df: pd.DataFrame) -> dict[str, Path]:
+def load_function_mutation_results(csv_path: Path = FUNCTION_MUTATION_RESULTS_CSV, enforce_single_run: bool = True) -> pd.DataFrame:
+    """
+    Loads mutation_function_results.csv -- a real re-slice of the same
+    Stryker reports behind mutation_results.csv, by target function
+    (runner/execution/stryker_runner.py:map_mutants_to_functions), not a
+    proportional/fabricated split. Absent (e.g. a run predating this
+    addition) returns an empty DataFrame rather than raising, exactly like
+    load_mutation_results/load_smell_results.
+
+    Adds the same coverage-inclusive corrected score and no_coverage_share
+    as load_mutation_results, computed per FUNCTION here instead of per
+    module -- this is what makes a genuine mutation-score-by-CCM-band
+    breakdown possible without fabricating anything.
+    """
+    if not csv_path.exists():
+        return pd.DataFrame()
+
+    df = pd.read_csv(csv_path)
+    if df.empty:
+        return df
+    if enforce_single_run:
+        df = _enforce_single_run(df, "mutation_function_results.csv")
+    for column in [
+        "ccm", "mutants_total", "mutants_killed", "mutants_killed_by_own_tests",
+        "mutants_killed_by_other_function_tests", "mutants_survived", "mutants_timeout",
+        "mutants_no_coverage", "mutants_compile_error", "mutants_unmapped_in_module",
+    ]:
+        if column in df.columns:
+            df[column] = pd.to_numeric(df[column], errors="coerce")
+
+    required = {"mutants_killed", "mutants_survived", "mutants_no_coverage", "mutants_timeout", "mutants_total"}
+    if required.issubset(df.columns):
+        covered_denom = _mutation_covered_denominator(df)
+        df["mutation_score_corrected"] = (
+            df["mutants_killed"] / covered_denom.replace(0, float("nan")) * 100
+        ).round(2)
+        df["no_coverage_share"] = (
+            df["mutants_no_coverage"] / df["mutants_total"].replace(0, float("nan")) * 100
+        ).round(2)
+    return df
+
+
+def build_h2_mutation_by_ccm_model(function_mutation_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    H2 mutation evidence: mutant-weighted, coverage-inclusive mutation
+    score by model x CCM band, aggregated from RAW per-function mutant
+    counts (summed, then scored) -- never an unweighted mean of per-
+    function percentages, same convention as build_mutation_summary_by_
+    model_strategy. Requires mutation_function_results.csv to exist (see
+    load_function_mutation_results); returns an empty frame otherwise so
+    callers can tell "not yet collected" apart from "collected, zero".
+    """
+    columns = ["model", "ccm_band", "distinct_functions", "mutants_total", "mutants_killed",
+               "mutants_killed_by_own_tests", "no_coverage_share", "mutation_score_corrected"]
+    if function_mutation_df.empty or "ccm" not in function_mutation_df.columns:
+        return pd.DataFrame(columns=columns)
+
+    banded = _add_ccm_band(function_mutation_df)
+    summary = banded.groupby(["model", "ccm_band"], dropna=False, observed=False).agg(
+        distinct_functions=("fn_id", "nunique"),
+        mutants_total=("mutants_total", "sum"),
+        mutants_killed=("mutants_killed", "sum"),
+        mutants_killed_by_own_tests=("mutants_killed_by_own_tests", "sum"),
+        mutants_survived=("mutants_survived", "sum"),
+        mutants_no_coverage=("mutants_no_coverage", "sum"),
+        mutants_timeout=("mutants_timeout", "sum"),
+    ).reset_index()
+
+    covered_denom = _mutation_covered_denominator(summary)
+    summary["mutation_score_corrected"] = (
+        summary["mutants_killed"] / covered_denom.replace(0, float("nan")) * 100
+    ).round(2)
+    summary["no_coverage_share"] = (
+        summary["mutants_no_coverage"] / summary["mutants_total"].replace(0, float("nan")) * 100
+    ).round(2)
+    summary["distinct_functions"] = summary["distinct_functions"].astype(int)
+    return summary.sort_values(["model", "ccm_band"]).reset_index(drop=True)[columns]
+
+
+def export_mutation_tables(df: pd.DataFrame, function_mutation_df: pd.DataFrame | None = None) -> dict[str, Path]:
     if df.empty:
         return {}
 
@@ -778,6 +903,14 @@ def export_mutation_tables(df: pd.DataFrame) -> dict[str, Path]:
     mutation_path = MUTATION_OUTPUT_DIR / "mutation_summary_by_model_strategy.csv"
     mutation_summary.to_csv(mutation_path, index=False)
     outputs["mutation_summary_by_model_strategy"] = mutation_path
+
+    if function_mutation_df is not None and not function_mutation_df.empty:
+        _ensure_output_dirs()
+        h2_mutation = build_h2_mutation_by_ccm_model(function_mutation_df)
+        if not h2_mutation.empty:
+            h2_mutation_path = TABLES_DIR / "h2_mutation_by_ccm_model.csv"
+            h2_mutation.to_csv(h2_mutation_path, index=False)
+            outputs["h2_mutation_by_ccm_model"] = h2_mutation_path
     return outputs
 
 
@@ -805,7 +938,53 @@ def plot_mutation_score(df: pd.DataFrame, output_path: Path) -> None:
     plt.close(fig)
 
 
-def export_mutation_figures(df: pd.DataFrame) -> dict[str, Path]:
+def plot_h2_mutation_by_ccm_model(function_mutation_df: pd.DataFrame, output_path: Path) -> None:
+    """
+    Figure H2-C -- mutation-score evidence for H2, only possible because
+    mutation_function_results.csv maps mutants to their containing target
+    function (see build_h2_mutation_by_ccm_model / map_mutants_to_functions),
+    not the module-level mutation_results.csv.
+
+    mutants_total and distinct_functions depend only on which of the 25
+    corpus functions fall in a CCM band -- the same source code is mutated
+    for every model -- so both are constant across models within a band.
+    One annotation per band (not per bar) states this instead of repeating
+    an identical label 5 times over.
+    """
+    table = build_h2_mutation_by_ccm_model(function_mutation_df)
+    if table.empty:
+        return
+    pivot = table.pivot(index="ccm_band", columns="model", values="mutation_score_corrected")
+    pivot = pivot.reindex(columns=[m for m in MODEL_SIZE_ORDER if m in pivot.columns])
+    band_n = table.groupby("ccm_band", observed=False)[["mutants_total", "distinct_functions"]].first()
+
+    band_n_line = "  |  ".join(
+        f"{band}: n={int(row.mutants_total)} mutantes ({int(row.distinct_functions)} funções)"
+        for band, row in band_n.iterrows() if pd.notna(row["mutants_total"])
+    )
+
+    fig, ax = plt.subplots(figsize=(11, 6.8))
+    pivot.plot(kind="bar", ax=ax, color=[MODEL_PALETTE.get(m, "#888888") for m in pivot.columns])
+    ax.set_ylim(0, 105)
+    ax.set_title(
+        "H2: mutation score corrigido por faixa de CCM e modelo\n"
+        f"{band_n_line}\n"
+        "(nº de mutantes/funções por faixa é idêntico entre modelos -- mesmo código-fonte mutado)",
+        fontsize=11,
+    )
+    ax.set_xlabel("Faixa de CCM")
+    ax.set_ylabel("Mutation score corrigido (%)")
+    ax.legend(title="Modelo (ordem por tag de config.: e2b < 3b < 4b < 7b; empate 7b em ordem alfabética)",
+              labels=[MODEL_SIZE_LABELS.get(m, m) for m in pivot.columns], fontsize=8,
+              loc="upper left", bbox_to_anchor=(1.01, 1))
+    ax.grid(axis="y", linestyle="--", alpha=0.3)
+    plt.xticks(rotation=0)
+    plt.tight_layout()
+    fig.savefig(output_path, dpi=300, bbox_inches="tight")
+    plt.close(fig)
+
+
+def export_mutation_figures(df: pd.DataFrame, function_mutation_df: pd.DataFrame | None = None) -> dict[str, Path]:
     if df.empty:
         return {}
 
@@ -813,6 +992,11 @@ def export_mutation_figures(df: pd.DataFrame) -> dict[str, Path]:
     outputs: dict[str, Path] = {}
     outputs["mutation_score"] = MUTATION_OUTPUT_DIR / "mutation_score.png"
     plot_mutation_score(df, outputs["mutation_score"])
+
+    if function_mutation_df is not None and not function_mutation_df.empty:
+        _ensure_output_dirs()
+        outputs["h2_mutation_by_ccm_model"] = FIGURES_DIR / "h2_mutation_by_ccm_model.png"
+        plot_h2_mutation_by_ccm_model(function_mutation_df, outputs["h2_mutation_by_ccm_model"])
     return outputs
 
 
@@ -820,7 +1004,7 @@ def export_mutation_figures(df: pd.DataFrame) -> dict[str, Path]:
 # Error events (error_events.csv) -- event log, supplementary diagnostic only
 # ─────────────────────────────────────────────────────────────────────────────
 
-def load_error_events(csv_path: Path = ERROR_EVENTS_CSV) -> pd.DataFrame:
+def load_error_events(csv_path: Path = ERROR_EVENTS_CSV, enforce_single_run: bool = True) -> pd.DataFrame:
     """
     error_events.csv is an event log, not one row per function: multiple
     rows can (and normally do) exist for the same model x strategy x
@@ -837,7 +1021,8 @@ def load_error_events(csv_path: Path = ERROR_EVENTS_CSV) -> pd.DataFrame:
     df = pd.read_csv(csv_path)
     if df.empty:
         return df
-    df = _enforce_single_run(df, "error_events.csv")
+    if enforce_single_run:
+        df = _enforce_single_run(df, "error_events.csv")
     for column in ["line_start", "line_end", "attempt"]:
         if column in df.columns:
             df[column] = pd.to_numeric(df[column], errors="coerce")
@@ -1305,9 +1490,8 @@ def plot_h2_coverage_by_ccm_model(df: pd.DataFrame, output_path: Path) -> None:
     pivot = pivot.reindex(columns=[m for m in MODEL_SIZE_ORDER if m in pivot.columns])
     n_pivot = table.pivot(index="ccm_band", columns="model", values="verified_observations")
 
-    palette = {"gemma_4": "#4c956c", "qwen_coder_3b": "#f2b134", "qwen_coder_7b": "#c44e52"}
     fig, ax = plt.subplots(figsize=(11, 6.5))
-    pivot.plot(kind="bar", ax=ax, color=[palette.get(m, "#888888") for m in pivot.columns])
+    pivot.plot(kind="bar", ax=ax, color=[MODEL_PALETTE.get(m, "#888888") for m in pivot.columns])
     for container, model in zip(ax.containers, pivot.columns):
         labels = [f"n={int(n)}" if pd.notna(n) else "n=0" for n in n_pivot[model].reindex(pivot.index)]
         ax.bar_label(container, labels=labels, fontsize=7, rotation=90, padding=2)
@@ -1317,9 +1501,10 @@ def plot_h2_coverage_by_ccm_model(df: pd.DataFrame, output_path: Path) -> None:
     )
     ax.set_xlabel("Faixa de CCM")
     ax.set_ylabel("Cobertura média de statements (%)")
-    ax.set_ylim(0, 118)
-    ax.legend(title="Modelo (config.: gemma4:e2b < qwen2.5-coder:3b < qwen2.5-coder:7b)",
-              labels=[MODEL_SIZE_LABELS.get(m, m) for m in pivot.columns], fontsize=8)
+    ax.set_ylim(0, 112)
+    ax.legend(title="Modelo (ordem por tag de config.: e2b < 3b < 4b < 7b; empate 7b em ordem alfabética)",
+              labels=[MODEL_SIZE_LABELS.get(m, m) for m in pivot.columns], fontsize=8,
+              loc="upper left", bbox_to_anchor=(1.01, 1))
     ax.grid(axis="y", linestyle="--", alpha=0.3)
     plt.xticks(rotation=0)
     plt.tight_layout()
@@ -1341,7 +1526,6 @@ def plot_h2_coverage_continuous(df: pd.DataFrame, output_path: Path) -> None:
     if verified.empty or "ccm" not in verified.columns:
         return
 
-    palette = {"gemma_4": "#4c956c", "qwen_coder_3b": "#f2b134", "qwen_coder_7b": "#c44e52"}
     markers = {"zero_shot": "o", "few_shot": "s", "structured": "^"}
 
     fig, ax = plt.subplots(figsize=(10.5, 6.5))
@@ -1349,7 +1533,7 @@ def plot_h2_coverage_continuous(df: pd.DataFrame, output_path: Path) -> None:
         sub = verified[verified["model"] == model]
         if sub.empty:
             continue
-        color = palette.get(model, "#888888")
+        color = MODEL_PALETTE.get(model, "#888888")
         for strategy, marker in markers.items():
             s = sub[sub["strategy"] == strategy]
             if s.empty:
@@ -1454,7 +1638,12 @@ def dataframe_to_markdown(df: pd.DataFrame) -> str:
     return "\n".join(rows)
 
 
-def build_article_markdown(summary: pd.DataFrame, ccm_summary: pd.DataFrame, h2_table: pd.DataFrame) -> str:
+def build_article_markdown(
+    summary: pd.DataFrame,
+    ccm_summary: pd.DataFrame,
+    h2_table: pd.DataFrame,
+    h2_mutation_table: pd.DataFrame | None = None,
+) -> str:
     lines = [
         "# Resumo da análise experimental",
         "",
@@ -1474,12 +1663,31 @@ def build_article_markdown(summary: pd.DataFrame, ccm_summary: pd.DataFrame, h2_
         "Evidência primária de H2 (Opção C): cobertura por modelo × estratégia × faixa de CCM, "
         "sobre observações de sucesso verificado. `attempted_observations` inclui tudo; "
         "`fully_skipped_observations` são não mensuráveis (não zero); as colunas de cobertura "
-        "vêm apenas de `verified_observations`. Ver `docs/experimental-workflow.md` para a "
-        "rejeição da Opção B (mutation por CCM) e o achado negativo da Opção A (assertion roulette).",
+        "vêm apenas de `verified_observations`. Ver `docs/experimental-workflow.md` para o "
+        "achado negativo da Opção A (assertion roulette).",
         "",
         dataframe_to_markdown(h2_table),
         "",
     ]
+    if h2_mutation_table is not None and not h2_mutation_table.empty:
+        lines += [
+            "## 4. H2 -- complexidade x modelo (mutation score, evidência complementar)",
+            "",
+            "`mutation_function_results.csv` mapeia cada mutante Stryker à função-alvo que o "
+            "contém (via `location`), não ao módulo inteiro -- por isso, ao contrário do "
+            "`mutation_results.csv` bruto (uma linha por módulo, que cobre várias faixas de CCM), "
+            "esta tabela é uma agregação genuína por função, ponderada por mutante "
+            "(soma de killed/survived/no_coverage/timeout antes de calcular a taxa, nunca a média "
+            "não ponderada das taxas por função). `mutants_killed_by_own_tests` isola os kills "
+            "atribuíveis aos próprios testes da função (via `killedBy` e o marcador "
+            "`FN_<função>_END` no nome do teste), separando-os de kills por testes de uma função "
+            "irmã no mesmo módulo. Ver a coluna `distinct_functions` para o tamanho amostral de "
+            "cada célula -- as faixas `11-20` e `>20` têm poucas funções distintas (5 e 3 de 25) e "
+            "devem ser lidas com essa ressalva.",
+            "",
+            dataframe_to_markdown(h2_mutation_table),
+            "",
+        ]
     return "\n".join(lines)
 
 
@@ -1496,8 +1704,9 @@ def generate_analysis_report() -> dict[str, Path]:
     outputs.update(smell_figures)
 
     mutation_df = load_mutation_results()
-    mutation_outputs = export_mutation_tables(mutation_df)
-    mutation_figures = export_mutation_figures(mutation_df)
+    function_mutation_df = load_function_mutation_results()
+    mutation_outputs = export_mutation_tables(mutation_df, function_mutation_df)
+    mutation_figures = export_mutation_figures(mutation_df, function_mutation_df)
     outputs.update(mutation_outputs)
     outputs.update(mutation_figures)
 
@@ -1514,8 +1723,11 @@ def generate_analysis_report() -> dict[str, Path]:
     summary = build_summary_by_model_strategy(df)
     ccm_summary = build_summary_by_ccm(df)
     h2_table = build_h2_coverage_table(df)
+    h2_mutation_table = build_h2_mutation_by_ccm_model(function_mutation_df) if not function_mutation_df.empty else pd.DataFrame()
     markdown_path = OUTPUT_DIR / "article_summary.md"
-    markdown_path.write_text(build_article_markdown(summary, ccm_summary, h2_table), encoding="utf-8")
+    markdown_path.write_text(
+        build_article_markdown(summary, ccm_summary, h2_table, h2_mutation_table), encoding="utf-8"
+    )
     outputs["article_summary"] = markdown_path
 
     if not smell_df.empty:

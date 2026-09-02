@@ -1,6 +1,7 @@
 import pandas as pd
 
 from config import (
+    FUNCTION_MUTATION_RESULTS_CSV,
     GLOBAL_RESULTS_CSV,
     MUTATION_RESULTS_CSV,
     RESULTS_CSV,
@@ -16,6 +17,7 @@ _SERVICE_ID = ["run_id", "model", "strategy", "source_file", "test_output_file"]
 _GLOBAL_ID = ["run_id", "model", "strategy"]
 _MODULE_ID = ["run_id", "model", "strategy", "source_file", "test_output_file"]
 _SMELL_ID = ["run_id", "model", "strategy", "module", "fn_id"]
+_FUNCTION_MUTATION_ID = ["run_id", "model", "strategy", "module", "fn_id"]
 
 
 def _save_upsert(path, row, key_columns):
@@ -69,6 +71,10 @@ def save_global_result(row):
 
 def save_mutation_result(row):
     _save_upsert(MUTATION_RESULTS_CSV, row, _MODULE_ID)
+
+
+def save_function_mutation_result(row):
+    _save_upsert(FUNCTION_MUTATION_RESULTS_CSV, row, _FUNCTION_MUTATION_ID)
 
 
 def save_smell_result(row):

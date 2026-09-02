@@ -61,12 +61,38 @@ describe('EncounterService', () => {
   });
   // AUTO-GENERATED-BOOTSTRAP-END
 
+  describe('FN_createEncounter_END', () => {
+describe('createEncounter', () => {
+  it('should throw BadRequestException when dto.adtType is not AdtType.A01', async () => {
+    encounterRepositoryMock.findActiveByPatient.mockResolvedValueOnce(undefined);
+    patientServiceMock.getPatientById.mockResolvedValueOnce(undefined);
+
+    await expect(() => service.createEncounter({ adtType: AdtType.A02, patientId: '123' })).rejects.toThrow(BadRequestException);
+  });
+
+  it('should throw BadRequestException when patient is inactive', async () => {
+    encounterRepositoryMock.findActiveByPatient.mockResolvedValueOnce(undefined);
+    patientServiceMock.getPatientById.mockResolvedValueOnce({ active: false });
+
+    await expect(() => service.createEncounter({ adtType: AdtType.A01, patientId: '123' })).rejects.toThrow(BadRequestException);
+  });
+
+  it.skip('should throw ConflictException when patient already has an active encounter', async () => {
+        encounterRepositoryMock.findActiveByPatient.mockResolvedValueOnce({ id: '123' });
+        patientServiceMock.getPatientById.mockResolvedValueOnce({ active: true });
+
+        await expect(() => service.createEncounter({ adtType: AdtType.A01, patientId: '123' })).rejects.toThrow(ConflictException);
+      });
+});
+});
+
   describe('FN_validateEncounterFields_END', () => {
 describe('validateEncounterFields', () => {
   it.skip('should throw BadRequestException for ADT A01 with no Wart', async () => {
         // arrange
         const dto: CreateEncounterDto = {
           adtType: AdtType.A01,
+          patientId: '123',
           admitDate: '2023-10-01',
         };
         jest.spyOn(encounterRepositoryMock, 'findById').mockResolvedValue(undefined);
@@ -84,6 +110,7 @@ describe('validateEncounterFields', () => {
         // arrange
         const dto: CreateEncounterDto = {
           adtType: AdtType.A02,
+          patientId: '123',
           admitDate: '2023-10-01',
         };
         jest.spyOn(encounterRepositoryMock, 'findById').mockResolvedValue(undefined);
@@ -98,45 +125,50 @@ describe('validateEncounterFields', () => {
       });
 
   it.skip('should throw BadRequestException for ADT A03 with Wart', async () => {
-        // arrange
-        const dto: CreateEncounterDto = {
-          adtType: AdtType.A03,
-          admitDate: '2023-10-01',
-          ward: Ward.ICU,
-        };
-        jest.spyOn(encounterRepositoryMock, 'findById').mockResolvedValue(undefined);
-        jest.spyOn(patientServiceMock, 'getPatientById').mockResolvedValue(undefined);
+          // arrange
+          const dto: CreateEncounterDto = {
+            adtType: AdtType.A03,
+            patientId: '123',
+            admitDate: '2023-10-01',
+            ward: Ward.ICU,
+          };
+          jest.spyOn(encounterRepositoryMock, 'findById').mockResolvedValueOnce(undefined);
+          jest.spyOn(patientServiceMock, 'getPatientById').mockResolvedValueOnce(undefined);
 
-        // act
-        await expect(() => service.validateEncounterFields(dto)).rejects.toThrow(BadRequestException);
+          // act
+          await expect(() => service.validateEncounterFields(dto)).rejects.toThrow(BadRequestException);
 
-        // assert
-        expect(encounterRepositoryMock.findById).toHaveBeenCalledWith(dto.patientId);
-        expect(patientServiceMock.getPatientById).toHaveBeenCalledWith(dto.patientId);
-      });
+          // assert
+          expect(encounterRepositoryMock.findById).toHaveBeenCalledWith(dto.patientId);
+          expect(patientServiceMock.getPatientById).toHaveBeenCalledWith(dto.patientId);
+        });
+
 
   it.skip('should throw BadRequestException for ADT A08 with Wart', async () => {
-        // arrange
-        const dto: CreateEncounterDto = {
-          adtType: AdtType.A08,
-          admitDate: '2023-10-01',
-          ward: Ward.ICU,
-        };
-        jest.spyOn(encounterRepositoryMock, 'findById').mockResolvedValue(undefined);
-        jest.spyOn(patientServiceMock, 'getPatientById').mockResolvedValue(undefined);
+          // arrange
+          const dto: CreateEncounterDto = {
+            adtType: AdtType.A08,
+            patientId: '123',
+            admitDate: '2023-10-01',
+            ward: Ward.ICU,
+          };
+          jest.spyOn(encounterRepositoryMock, 'findById').mockResolvedValueOnce(undefined);
+          jest.spyOn(patientServiceMock, 'getPatientById').mockResolvedValueOnce(undefined);
 
-        // act
-        await expect(() => service.validateEncounterFields(dto)).rejects.toThrow(BadRequestException);
+          // act
+          await expect(() => service.validateEncounterFields(dto)).rejects.toThrow(BadRequestException);
 
-        // assert
-        expect(encounterRepositoryMock.findById).toHaveBeenCalledWith(dto.patientId);
-        expect(patientServiceMock.getPatientById).toHaveBeenCalledWith(dto.patientId);
-      });
+          // assert
+          expect(encounterRepositoryMock.findById).toHaveBeenCalledWith(dto.patientId);
+          expect(patientServiceMock.getPatientById).toHaveBeenCalledWith(dto.patientId);
+        });
+
 
   it.skip('should throw BadRequestException for ADT A08 with no PatientId', async () => {
         // arrange
         const dto: CreateEncounterDto = {
           adtType: AdtType.A08,
+          patientId: '',
           admitDate: '2023-10-01',
         };
         jest.spyOn(encounterRepositoryMock, 'findById').mockResolvedValue(undefined);
@@ -154,454 +186,1046 @@ describe('validateEncounterFields', () => {
 
   describe('FN_listEncountersByPatient_END', () => {
 describe('listEncountersByPatient', () => {
-  it('should return encounters for a valid patientId', async () => {
+  it.skip('should return an empty array if the patient is not found', async () => {
+        // arrange
+        patientServiceMock.getPatientById.mockResolvedValue(undefined);
+
+        // act
+        const result = await service.listEncountersByPatient('nonexistentPatientId', new ListEncountersByPatientDto());
+
+        // assert
+        expect(result).toEqual([]);
+      });
+
+  it('should return an empty array if the patient has no encounters', async () => {
     // arrange
-    const patientId = '12345';
-    const dto: ListEncountersByPatientDto = { status: EncounterStatus.ADMITTED };
-    const encounters: Encounter[] = [{ id: '1', patientId, adtType: AdtType.A01, status: EncounterStatus.ADMITTED }];
-    encounterRepositoryMock.findByPatient.mockResolvedValueOnce(encounters);
+    patientServiceMock.getPatientById.mockResolvedValue({ id: 'patientId' });
+    encounterRepositoryMock.findByPatient.mockResolvedValue([]);
 
     // act
-    const result = await service.listEncountersByPatient(patientId, dto);
+    const result = await service.listEncountersByPatient('patientId', new ListEncountersByPatientDto());
 
     // assert
-    expect(result).toEqual(encounters);
-    expect(encounterRepositoryMock.findByPatient).toHaveBeenCalledWith(patientId, dto);
+    expect(result).toEqual([]);
   });
 
-  it.skip('should throw NotFoundException if patient is not found', async () => {
-        // arrange
-        const patientId = '12345';
-        const dto: ListEncountersByPatientDto = { status: EncounterStatus.ADMITTED };
-        patientServiceMock.getPatientById.mockResolvedValueOnce(undefined);
+  it('should return the encounters for the patient', async () => {
+    // arrange
+    patientServiceMock.getPatientById.mockResolvedValue({ id: 'patientId' });
+    encounterRepositoryMock.findByPatient.mockResolvedValue([
+      { id: 'encounterId1', patientId: 'patientId', adtType: AdtType.A01, status: EncounterStatus.ADMITTED },
+      { id: 'encounterId2', patientId: 'patientId', adtType: AdtType.A02, status: EncounterStatus.TRANSFERRED },
+    ]);
 
-        // act
-        await expect(service.listEncountersByPatient(patientId, dto)).rejects.toThrow(NotFoundException);
-      });
+    // act
+    const result = await service.listEncountersByPatient('patientId', new ListEncountersByPatientDto());
 
-  it.skip('should throw ConflictException if patient is not active', async () => {
-        // arrange
-        const patientId = '12345';
-        const dto: ListEncountersByPatientDto = { status: EncounterStatus.ADMITTED };
-        patientServiceMock.getPatientById.mockResolvedValueOnce({ isActive: false });
-
-        // act
-        await expect(service.listEncountersByPatient(patientId, dto)).rejects.toThrow(ConflictException);
-      });
-
-  it.skip('should throw BadRequestException if dto is invalid', async () => {
-        // arrange
-        const patientId = '12345';
-        const dto: ListEncountersByPatientDto = { status: 'invalidStatus' };
-
-        // act
-        await expect(service.listEncountersByPatient(patientId, dto)).rejects.toThrow(BadRequestException);
-      });
+    // assert
+    expect(result).toEqual([
+      { id: 'encounterId1', patientId: 'patientId', adtType: AdtType.A01, status: EncounterStatus.ADMITTED },
+      { id: 'encounterId2', patientId: 'patientId', adtType: AdtType.A02, status: EncounterStatus.TRANSFERRED },
+    ]);
+  });
 });
 });
 
   describe('FN_getEncounterById_END', () => {
 describe('getEncounterById', () => {
   it('should throw NotFoundException when encounter is not found', async () => {
-    // arrange: mock dependencies
+    // arrange
     encounterRepositoryMock.findById.mockResolvedValueOnce(undefined);
 
-    // act: call the service method
+    // act
     await expect(service.getEncounterById('123')).rejects.toThrow(NotFoundException);
-
-    // assert: verify result or thrown exception
   });
 });
 });
 
   describe('FN_transitionEncounterStatus_END', () => {
 describe('transitionEncounterStatus', () => {
-  it('should throw BadRequestException if invalid status transition', async () => {
-    const encounter = { status: EncounterStatus.ADMITTED };
-    const dto = { status: EncounterStatus.DISCHARGED };
-    encounterRepositoryMock.findById.mockResolvedValue(encounter);
-    await expect(() => service.transitionEncounterStatus('123', dto)).rejects.toThrow(BadRequestException);
+  it('should throw BadRequestException if status transition is invalid', async () => {
+    // arrange: mock dependencies
+    const encounterRepositoryMock = {
+      findById: jest.fn().mockResolvedValue({
+        id: '1',
+        patientId: '2',
+        adtType: AdtType.A01,
+        status: EncounterStatus.ADMITTED,
+        ward: Ward.ICU,
+        admitDate: new Date('2023-01-01'),
+        transferDate: null,
+        dischargeDate: null,
+        created_at: new Date('2023-01-01'),
+        updated_at: new Date('2023-01-01'),
+        patient: {
+          id: '2',
+          name: 'John Doe',
+          cpf: '1234567890',
+          sex: Sex.MALE,
+          birthDate: new Date('1990-01-01'),
+          created_at: new Date('2023-01-01'),
+          updated_at: new Date('2023-01-01'),
+        },
+        orders: [],
+      }),
+    } as unknown as jest.Mocked<EncounterRepository>;
+
+    const service = new EncounterService(encounterRepositoryMock, patientServiceMock);
+
+    // act: call the service method with invalid transition
+    await expect(service.transitionEncounterStatus('1', { status: EncounterStatus.DISCHARGED })).rejects.toThrow(BadRequestException);
   });
 
-  it('should throw BadRequestException if encounter is discharged', async () => {
-    const encounter = { status: EncounterStatus.DISCHARGED };
-    const dto = { status: EncounterStatus.DISCHARGED };
-    encounterRepositoryMock.findById.mockResolvedValue(encounter);
-    await expect(() => service.transitionEncounterStatus('123', dto)).rejects.toThrow(BadRequestException);
+  it('should throw BadRequestException if encounter has pending orders and is discharged', async () => {
+    // arrange: mock dependencies
+    const encounterRepositoryMock = {
+      findById: jest.fn().mockResolvedValue({
+        id: '1',
+        patientId: '2',
+        adtType: AdtType.A01,
+        status: EncounterStatus.ADMITTED,
+        ward: Ward.ICU,
+        admitDate: new Date('2023-01-01'),
+        transferDate: null,
+        dischargeDate: null,
+        created_at: new Date('2023-01-01'),
+        updated_at: new Date('2023-01-01'),
+        patient: {
+          id: '2',
+          name: 'John Doe',
+          cpf: '1234567890',
+          sex: Sex.MALE,
+          birthDate: new Date('1990-01-01'),
+          created_at: new Date('2023-01-01'),
+          updated_at: new Date('2023-01-01'),
+        },
+        orders: [
+          {
+            id: '1',
+            encounterId: '1',
+            status: OrderStatus.PENDING,
+            created_at: new Date('2023-01-01'),
+            updated_at: new Date('2023-01-01'),
+          },
+        ],
+      }),
+    } as unknown as jest.Mocked<EncounterRepository>;
+
+    const service = new EncounterService(encounterRepositoryMock, patientServiceMock);
+
+    // act: call the service method with discharge
+    await expect(service.transitionEncounterStatus('1', { status: EncounterStatus.DISCHARGED })).rejects.toThrow(BadRequestException);
   });
 
-  it('should throw BadRequestException if encounter has pending orders', async () => {
-    const encounter = { status: EncounterStatus.ADMITTED, orders: [{ status: OrderStatus.PENDING }] };
-    const dto = { status: EncounterStatus.DISCHARGED };
-    encounterRepositoryMock.findById.mockResolvedValue(encounter);
-    await expect(() => service.transitionEncounterStatus('123', dto)).rejects.toThrow(BadRequestException);
+  it('should throw BadRequestException if ward is required for transfer', async () => {
+    // arrange: mock dependencies
+    const encounterRepositoryMock = {
+      findById: jest.fn().mockResolvedValue({
+        id: '1',
+        patientId: '2',
+        adtType: AdtType.A01,
+        status: EncounterStatus.ADMITTED,
+        ward: Ward.ICU,
+        admitDate: new Date('2023-01-01'),
+        transferDate: null,
+        dischargeDate: null,
+        created_at: new Date('2023-01-01'),
+        updated_at: new Date('2023-01-01'),
+        patient: {
+          id: '2',
+          name: 'John Doe',
+          cpf: '1234567890',
+          sex: Sex.MALE,
+          birthDate: new Date('1990-01-01'),
+          created_at: new Date('2023-01-01'),
+          updated_at: new Date('2023-01-01'),
+        },
+        orders: [],
+      }),
+    } as unknown as jest.Mocked<EncounterRepository>;
+
+    const service = new EncounterService(encounterRepositoryMock, patientServiceMock);
+
+    // act: call the service method with transfer
+    await expect(service.transitionEncounterStatus('1', { status: EncounterStatus.TRANSFERRED })).rejects.toThrow(BadRequestException);
   });
 
-  it('should throw BadRequestException if transfer requires a different ward', async () => {
-    const encounter = { status: EncounterStatus.TRANSFERRED, ward: Ward.ICU };
-    const dto = { status: EncounterStatus.TRANSFERRED, ward: Ward.INPATIENT };
-    encounterRepositoryMock.findById.mockResolvedValue(encounter);
-    await expect(() => service.transitionEncounterStatus('123', dto)).rejects.toThrow(BadRequestException);
+  it('should throw BadRequestException if ward is different for transfer', async () => {
+    // arrange: mock dependencies
+    const encounterRepositoryMock = {
+      findById: jest.fn().mockResolvedValue({
+        id: '1',
+        patientId: '2',
+        adtType: AdtType.A01,
+        status: EncounterStatus.ADMITTED,
+        ward: Ward.ICU,
+        admitDate: new Date('2023-01-01'),
+        transferDate: null,
+        dischargeDate: null,
+        created_at: new Date('2023-01-01'),
+        updated_at: new Date('2023-01-01'),
+        patient: {
+          id: '2',
+          name: 'John Doe',
+          cpf: '1234567890',
+          sex: Sex.MALE,
+          birthDate: new Date('1990-01-01'),
+          created_at: new Date('2023-01-01'),
+          updated_at: new Date('2023-01-01'),
+        },
+        orders: [],
+      }),
+    } as unknown as jest.Mocked<EncounterRepository>;
+
+    const service = new EncounterService(encounterRepositoryMock, patientServiceMock);
+
+    // act: call the service method with transfer
+    await expect(service.transitionEncounterStatus('1', { status: EncounterStatus.TRANSFERRED, ward: Ward.SURGERY })).rejects.toThrow(BadRequestException);
   });
 
   it('should throw BadRequestException if transferDate is required for transfer', async () => {
-    const encounter = { status: EncounterStatus.TRANSFERRED };
-    const dto = { status: EncounterStatus.TRANSFERRED };
-    encounterRepositoryMock.findById.mockResolvedValue(encounter);
-    await expect(() => service.transitionEncounterStatus('123', dto)).rejects.toThrow(BadRequestException);
+    // arrange: mock dependencies
+    const encounterRepositoryMock = {
+      findById: jest.fn().mockResolvedValue({
+        id: '1',
+        patientId: '2',
+        adtType: AdtType.A01,
+        status: EncounterStatus.ADMITTED,
+        ward: Ward.ICU,
+        admitDate: new Date('2023-01-01'),
+        transferDate: null,
+        dischargeDate: null,
+        created_at: new Date('2023-01-01'),
+        updated_at: new Date('2023-01-01'),
+        patient: {
+          id: '2',
+          name: 'John Doe',
+          cpf: '1234567890',
+          sex: Sex.MALE,
+          birthDate: new Date('1990-01-01'),
+          created_at: new Date('2023-01-01'),
+          updated_at: new Date('2023-01-01'),
+        },
+        orders: [],
+      }),
+    } as unknown as jest.Mocked<EncounterRepository>;
+
+    const service = new EncounterService(encounterRepositoryMock, patientServiceMock);
+
+    // act: call the service method with transfer
+    await expect(service.transitionEncounterStatus('1', { status: EncounterStatus.TRANSFERRED })).rejects.toThrow(BadRequestException);
   });
 
-  it('should throw BadRequestException if transferDate must be after admitDate', async () => {
-    const encounter = { status: EncounterStatus.TRANSFERRED, admitDate: new Date('2023-01-01') };
-    const dto = { status: EncounterStatus.TRANSFERRED, transferDate: '2023-01-01' };
-    encounterRepositoryMock.findById.mockResolvedValue(encounter);
-    await expect(() => service.transitionEncounterStatus('123', dto)).rejects.toThrow(BadRequestException);
+  it('should throw BadRequestException if transferDate is before admitDate for transfer', async () => {
+    // arrange: mock dependencies
+    const encounterRepositoryMock = {
+      findById: jest.fn().mockResolvedValue({
+        id: '1',
+        patientId: '2',
+        adtType: AdtType.A01,
+        status: EncounterStatus.ADMITTED,
+        ward: Ward.ICU,
+        admitDate: new Date('2023-01-01'),
+        transferDate: null,
+        dischargeDate: null,
+        created_at: new Date('2023-01-01'),
+        updated_at: new Date('2023-01-01'),
+        patient: {
+          id: '2',
+          name: 'John Doe',
+          cpf: '1234567890',
+          sex: Sex.MALE,
+          birthDate: new Date('1990-01-01'),
+          created_at: new Date('2023-01-01'),
+          updated_at: new Date('2023-01-01'),
+        },
+        orders: [],
+      }),
+    } as unknown as jest.Mocked<EncounterRepository>;
+
+    const service = new EncounterService(encounterRepositoryMock, patientServiceMock);
+
+    // act: call the service method with transfer
+    await expect(service.transitionEncounterStatus('1', { status: EncounterStatus.TRANSFERRED, transferDate: '2022-12-31' })).rejects.toThrow(BadRequestException);
   });
 
   it('should throw BadRequestException if dischargeDate is required for discharge', async () => {
-    const encounter = { status: EncounterStatus.DISCHARGED };
-    const dto = { status: EncounterStatus.DISCHARGED };
-    encounterRepositoryMock.findById.mockResolvedValue(encounter);
-    await expect(() => service.transitionEncounterStatus('123', dto)).rejects.toThrow(BadRequestException);
+    // arrange: mock dependencies
+    const encounterRepositoryMock = {
+      findById: jest.fn().mockResolvedValue({
+        id: '1',
+        patientId: '2',
+        adtType: AdtType.A01,
+        status: EncounterStatus.ADMITTED,
+        ward: Ward.ICU,
+        admitDate: new Date('2023-01-01'),
+        transferDate: null,
+        dischargeDate: null,
+        created_at: new Date('2023-01-01'),
+        updated_at: new Date('2023-01-01'),
+        patient: {
+          id: '2',
+          name: 'John Doe',
+          cpf: '1234567890',
+          sex: Sex.MALE,
+          birthDate: new Date('1990-01-01'),
+          created_at: new Date('2023-01-01'),
+          updated_at: new Date('2023-01-01'),
+        },
+        orders: [],
+      }),
+    } as unknown as jest.Mocked<EncounterRepository>;
+
+    const service = new EncounterService(encounterRepositoryMock, patientServiceMock);
+
+    // act: call the service method with discharge
+    await expect(service.transitionEncounterStatus('1', { status: EncounterStatus.DISCHARGED })).rejects.toThrow(BadRequestException);
   });
 
-  it('should throw BadRequestException if dischargeDate must be after admitDate', async () => {
-    const encounter = { status: EncounterStatus.DISCHARGED, admitDate: new Date('2023-01-01') };
-    const dto = { status: EncounterStatus.DISCHARGED, dischargeDate: '2023-01-01' };
-    encounterRepositoryMock.findById.mockResolvedValue(encounter);
-    await expect(() => service.transitionEncounterStatus('123', dto)).rejects.toThrow(BadRequestException);
+  it('should throw BadRequestException if dischargeDate is before admitDate for discharge', async () => {
+    // arrange: mock dependencies
+    const encounterRepositoryMock = {
+      findById: jest.fn().mockResolvedValue({
+        id: '1',
+        patientId: '2',
+        adtType: AdtType.A01,
+        status: EncounterStatus.ADMITTED,
+        ward: Ward.ICU,
+        admitDate: new Date('2023-01-01'),
+        transferDate: null,
+        dischargeDate: null,
+        created_at: new Date('2023-01-01'),
+        updated_at: new Date('2023-01-01'),
+        patient: {
+          id: '2',
+          name: 'John Doe',
+          cpf: '1234567890',
+          sex: Sex.MALE,
+          birthDate: new Date('1990-01-01'),
+          created_at: new Date('2023-01-01'),
+          updated_at: new Date('2023-01-01'),
+        },
+        orders: [],
+      }),
+    } as unknown as jest.Mocked<EncounterRepository>;
+
+    const service = new EncounterService(encounterRepositoryMock, patientServiceMock);
+
+    // act: call the service method with discharge
+    await expect(service.transitionEncounterStatus('1', { status: EncounterStatus.DISCHARGED, dischargeDate: '2022-12-31' })).rejects.toThrow(BadRequestException);
   });
 
-  it('should throw BadRequestException if dischargeDate must be after transferDate', async () => {
-    const encounter = { status: EncounterStatus.DISCHARGED, admitDate: new Date('2023-01-01'), transferDate: new Date('2023-01-02') };
-    const dto = { status: EncounterStatus.DISCHARGED, dischargeDate: '2023-01-01' };
-    encounterRepositoryMock.findById.mockResolvedValue(encounter);
-    await expect(() => service.transitionEncounterStatus('123', dto)).rejects.toThrow(BadRequestException);
+  it('should throw BadRequestException if dischargeDate is before transferDate for discharge', async () => {
+    // arrange: mock dependencies
+    const encounterRepositoryMock = {
+      findById: jest.fn().mockResolvedValue({
+        id: '1',
+        patientId: '2',
+        adtType: AdtType.A01,
+        status: EncounterStatus.ADMITTED,
+        ward: Ward.ICU,
+        admitDate: new Date('2023-01-01'),
+        transferDate: new Date('2023-02-01'),
+        dischargeDate: null,
+        created_at: new Date('2023-01-01'),
+        updated_at: new Date('2023-01-01'),
+        patient: {
+          id: '2',
+          name: 'John Doe',
+          cpf: '1234567890',
+          sex: Sex.MALE,
+          birthDate: new Date('1990-01-01'),
+          created_at: new Date('2023-01-01'),
+          updated_at: new Date('2023-01-01'),
+        },
+        orders: [],
+      }),
+    } as unknown as jest.Mocked<EncounterRepository>;
+
+    const service = new EncounterService(encounterRepositoryMock, patientServiceMock);
+
+    // act: call the service method with discharge
+    await expect(service.transitionEncounterStatus('1', { status: EncounterStatus.DISCHARGED, dischargeDate: '2023-01-31' })).rejects.toThrow(BadRequestException);
   });
 
   it('should throw BadRequestException if ADT A08 encounters cannot have status transitions', async () => {
-    const encounter = { status: EncounterStatus.ADMITTED, adtType: AdtType.A08 };
-    const dto = { status: EncounterStatus.DISCHARGED };
-    encounterRepositoryMock.findById.mockResolvedValue(encounter);
-    await expect(() => service.transitionEncounterStatus('123', dto)).rejects.toThrow(BadRequestException);
+    // arrange: mock dependencies
+    const encounterRepositoryMock = {
+      findById: jest.fn().mockResolvedValue({
+        id: '1',
+        patientId: '2',
+        adtType: AdtType.A08,
+        status: EncounterStatus.ADMITTED,
+        ward: Ward.ICU,
+        admitDate: new Date('2023-01-01'),
+        transferDate: null,
+        dischargeDate: null,
+        created_at: new Date('2023-01-01'),
+        updated_at: new Date('2023-01-01'),
+        patient: {
+          id: '2',
+          name: 'John Doe',
+          cpf: '1234567890',
+          sex: Sex.MALE,
+          birthDate: new Date('1990-01-01'),
+          created_at: new Date('2023-01-01'),
+          updated_at: new Date('2023-01-01'),
+        },
+        orders: [],
+      }),
+    } as unknown as jest.Mocked<EncounterRepository>;
+
+    const service = new EncounterService(encounterRepositoryMock, patientServiceMock);
+
+    // act: call the service method with discharge
+    await expect(service.transitionEncounterStatus('1', { status: EncounterStatus.DISCHARGED })).rejects.toThrow(BadRequestException);
   });
 });
 });
 
   describe('FN_processAdtMessage_END', () => {
 describe('processAdtMessage', () => {
-  it.skip('should throw BadRequestException for A01 with missing fields', async () => {
-        const dto: AdtMessageDto = {
-          adtType: AdtType.A01,
-          cpf: '12345678901',
-          name: 'John Doe',
-          birthDate: '1990-01-01',
-          sex: Sex.M,
-          admitDate: '2023-01-01',
-        };
-
-        await expect(() => service.processAdtMessage(dto)).rejects.toThrow(BadRequestException);
-      });
-
-  it.skip('should create patient and encounter for A01', async () => {
-        const dto: AdtMessageDto = {
-          adtType: AdtType.A01,
-          cpf: '12345678901',
-          name: 'John Doe',
-          birthDate: '1990-01-01',
-          sex: Sex.M,
-          admitDate: '2023-01-01',
-          ward: 'ICU',
-        };
-
-        encounterRepositoryMock.findActiveByPatient.mockResolvedValueOnce(undefined);
-        patientServiceMock.findByCpfOrFail.mockResolvedValueOnce(null);
-        patientServiceMock.createPatient.mockResolvedValueOnce({ id: '123' });
-        encounterRepositoryMock.save.mockResolvedValueOnce({ id: '456' });
-
-        const result = await service.processAdtMessage(dto);
-
-        expect(patientServiceMock.findByCpfOrFail).toHaveBeenCalledWith('12345678901');
-        expect(patientServiceMock.createPatient).toHaveBeenCalledWith({
-          cpf: '12345678901',
-          name: 'John Doe',
-          birthDate: '1990-01-01',
-          sex: Sex.M,
-          email: undefined,
-          phone: undefined,
-        });
-        expect(encounterRepositoryMock.save).toHaveBeenCalledWith({
-          patientId: '123',
-          adtType: AdtType.A01,
-          admitDate: '2023-01-01',
-          ward: 'ICU',
-        });
-        expect(result).toEqual({
-          patient: { id: '123' },
-          encounter: { id: '456' },
-        });
-      });
-
-  it.skip('should throw BadRequestException for A02 with missing fields', async () => {
-        const dto: AdtMessageDto = {
-          adtType: AdtType.A02,
-          cpf: '12345678901',
-          ward: 'ICU',
-          transferDate: '2023-01-01',
-        };
-
-        await expect(() => service.processAdtMessage(dto)).rejects.toThrow(BadRequestException);
-      });
-
-  it.skip('should find active encounter and update status for A02', async () => {
-        const dto: AdtMessageDto = {
-          adtType: AdtType.A02,
-          cpf: '12345678901',
-          ward: 'ICU',
-          transferDate: '2023-01-01',
-        };
-
-        encounterRepositoryMock.findActiveByPatient.mockResolvedValueOnce({ id: '456' });
-        patientServiceMock.findByCpfOrFail.mockResolvedValueOnce({ id: '123' });
-        encounterRepositoryMock.save.mockResolvedValueOnce({ id: '456' });
-
-        const result = await service.processAdtMessage(dto);
-
-        expect(patientServiceMock.findByCpfOrFail).toHaveBeenCalledWith('12345678901');
-        expect(encounterRepositoryMock.findActiveByPatient).toHaveBeenCalledWith('123');
-        expect(encounterRepositoryMock.save).toHaveBeenCalledWith({
-          id: '456',
-          status: EncounterStatus.TRANSFERRED,
-          ward: 'ICU',
-          transferDate: '2023-01-01',
-        });
-        expect(result).toEqual({
-          patient: { id: '123' },
-          encounter: { id: '456' },
-        });
-      });
-
-  it.skip('should throw BadRequestException for A03 with missing fields', async () => {
-        const dto: AdtMessageDto = {
-          adtType: AdtType.A03,
-          cpf: '12345678901',
-          dischargeDate: '2023-01-01',
-        };
-
-        await expect(() => service.processAdtMessage(dto)).rejects.toThrow(BadRequestException);
-      });
-
-  it.skip('should find active encounter and update status for A03', async () => {
-        const dto: AdtMessageDto = {
-          adtType: AdtType.A03,
-          cpf: '12345678901',
-          dischargeDate: '2023-01-01',
-        };
-
-        encounterRepositoryMock.findActiveByPatient.mockResolvedValueOnce({ id: '456' });
-        patientServiceMock.findByCpfOrFail.mockResolvedValueOnce({ id: '123' });
-        encounterRepositoryMock.save.mockResolvedValueOnce({ id: '456' });
-
-        const result = await service.processAdtMessage(dto);
-
-        expect(patientServiceMock.findByCpfOrFail).toHaveBeenCalledWith('12345678901');
-        expect(encounterRepositoryMock.findActiveByPatient).toHaveBeenCalledWith('123');
-        expect(encounterRepositoryMock.save).toHaveBeenCalledWith({
-          id: '456',
-          status: EncounterStatus.DISCHARGED,
-          dischargeDate: '2023-01-01',
-        });
-        expect(result).toEqual({
-          patient: { id: '123' },
-          encounter: { id: '456' },
-        });
-      });
-
-  it('should throw BadRequestException for A08 with missing fields', async () => {
+  it('should throw BadRequestException when dto.adtType is A01 and required fields are missing', async () => {
+    // arrange
     const dto: AdtMessageDto = {
-      adtType: AdtType.A08,
-      cpf: '12345678901',
+      adtType: AdtType.A01,
     };
 
+    // act
     await expect(() => service.processAdtMessage(dto)).rejects.toThrow(BadRequestException);
   });
 
-  it('should update patient and return updated patient for A08', async () => {
+  it.skip('should create a new patient and encounter for A01 adtType', async () => {
+        // arrange
+        const dto: AdtMessageDto = {
+          adtType: AdtType.A01,
+          cpf: '1234567890',
+          name: 'John Doe',
+          birthDate: '1990-01-01',
+          sex: Sex.M,
+          admitDate: '2023-04-01',
+        };
+
+        patientServiceMock.findByCpfOrFail.mockResolvedValueOnce(null);
+        patientServiceMock.createPatient.mockResolvedValueOnce({
+          id: 'patientId',
+          name: 'John Doe',
+          birthDate: new Date('1990-01-01'),
+          cpf: '1234567890',
+          sex: Sex.M,
+          email: null,
+          phone: null,
+          active: true,
+          created_at: new Date(),
+          updated_at: new Date(),
+          encounters: [],
+        });
+
+        encounterRepositoryMock.create.mockResolvedValueOnce({
+          id: 'encounterId',
+          patientId: 'patientId',
+          adtType: AdtType.A01,
+          status: EncounterStatus.ADMITTED,
+          ward: null,
+          admitDate: new Date('2023-04-01'),
+          transferDate: null,
+          dischargeDate: null,
+          created_at: new Date(),
+          updated_at: new Date(),
+          patient: {
+            id: 'patientId',
+            name: 'John Doe',
+            birthDate: new Date('1990-01-01'),
+            cpf: '1234567890',
+            sex: Sex.M,
+            email: null,
+            phone: null,
+            active: true,
+            created_at: new Date(),
+            updated_at: new Date(),
+            encounters: [],
+          },
+          orders: [],
+        });
+
+        // act
+        const result = await service.processAdtMessage(dto);
+
+        // assert
+        expect(patientServiceMock.findByCpfOrFail).toHaveBeenCalledWith(dto.cpf);
+        expect(patientServiceMock.createPatient).toHaveBeenCalledWith({
+          cpf: dto.cpf,
+          name: dto.name,
+          birthDate: dto.birthDate,
+          sex: dto.sex,
+          email: dto.email,
+          phone: dto.phone,
+        });
+        expect(encounterRepositoryMock.create).toHaveBeenCalledWith({
+          patientId: 'patientId',
+          adtType: AdtType.A01,
+          admitDate: dto.admitDate,
+          ward: null,
+        });
+        expect(result).toEqual({
+          patient: {
+            id: 'patientId',
+            name: 'John Doe',
+            birthDate: new Date('1990-01-01'),
+            cpf: '1234567890',
+            sex: Sex.M,
+            email: null,
+            phone: null,
+            active: true,
+            created_at: new Date(),
+            updated_at: new Date(),
+            encounters: [],
+          },
+          encounter: {
+            id: 'encounterId',
+            patientId: 'patientId',
+            adtType: AdtType.A01,
+            status: EncounterStatus.ADMITTED,
+            ward: null,
+            admitDate: new Date('2023-04-01'),
+            transferDate: null,
+            dischargeDate: null,
+            created_at: new Date(),
+            updated_at: new Date(),
+            patient: {
+              id: 'patientId',
+              name: 'John Doe',
+              birthDate: new Date('1990-01-01'),
+              cpf: '1234567890',
+              sex: Sex.M,
+              email: null,
+              phone: null,
+              active: true,
+              created_at: new Date(),
+              updated_at: new Date(),
+              encounters: [],
+            },
+            orders: [],
+          },
+        });
+      });
+
+  it.skip('should find an existing patient and create an encounter for A01 adtType', async () => {
+        // arrange
+        const dto: AdtMessageDto = {
+          adtType: AdtType.A01,
+          cpf: '1234567890',
+          name: 'John Doe',
+          birthDate: '1990-01-01',
+          sex: Sex.M,
+          admitDate: '2023-04-01',
+        };
+
+        patientServiceMock.findByCpfOrFail.mockResolvedValueOnce({
+          id: 'patientId',
+          name: 'John Doe',
+          birthDate: new Date('1990-01-01'),
+          cpf: '1234567890',
+          sex: Sex.M,
+          email: null,
+          phone: null,
+          active: true,
+          created_at: new Date(),
+          updated_at: new Date(),
+          encounters: [],
+        });
+
+        encounterRepositoryMock.create.mockResolvedValueOnce({
+          id: 'encounterId',
+          patientId: 'patientId',
+          adtType: AdtType.A01,
+          status: EncounterStatus.ADMITTED,
+          ward: null,
+          admitDate: new Date('2023-04-01'),
+          transferDate: null,
+          dischargeDate: null,
+          created_at: new Date(),
+          updated_at: new Date(),
+          patient: {
+            id: 'patientId',
+            name: 'John Doe',
+            birthDate: new Date('1990-01-01'),
+            cpf: '1234567890',
+            sex: Sex.M,
+            email: null,
+            phone: null,
+            active: true,
+            created_at: new Date(),
+            updated_at: new Date(),
+            encounters: [],
+          },
+          orders: [],
+        });
+
+        // act
+        const result = await service.processAdtMessage(dto);
+
+        // assert
+        expect(patientServiceMock.findByCpfOrFail).toHaveBeenCalledWith(dto.cpf);
+        expect(encounterRepositoryMock.create).toHaveBeenCalledWith({
+          patientId: 'patientId',
+          adtType: AdtType.A01,
+          admitDate: dto.admitDate,
+          ward: null,
+        });
+        expect(result).toEqual({
+          patient: {
+            id: 'patientId',
+            name: 'John Doe',
+            birthDate: new Date('1990-01-01'),
+            cpf: '1234567890',
+            sex: Sex.M,
+            email: null,
+            phone: null,
+            active: true,
+            created_at: new Date(),
+            updated_at: new Date(),
+            encounters: [],
+          },
+          encounter: {
+            id: 'encounterId',
+            patientId: 'patientId',
+            adtType: AdtType.A01,
+            status: EncounterStatus.ADMITTED,
+            ward: null,
+            admitDate: new Date('2023-04-01'),
+            transferDate: null,
+            dischargeDate: null,
+            created_at: new Date(),
+            updated_at: new Date(),
+            patient: {
+              id: 'patientId',
+              name: 'John Doe',
+              birthDate: new Date('1990-01-01'),
+              cpf: '1234567890',
+              sex: Sex.M,
+              email: null,
+              phone: null,
+              active: true,
+              created_at: new Date(),
+              updated_at: new Date(),
+              encounters: [],
+            },
+            orders: [],
+          },
+        });
+      });
+
+  it('should throw BadRequestException when dto.adtType is A02 and required fields are missing', async () => {
+    // arrange
     const dto: AdtMessageDto = {
-      adtType: AdtType.A08,
-      cpf: '12345678901',
-      name: 'John Doe',
-      birthDate: '1990-01-01',
-      sex: Sex.M,
-      email: 'john.doe@example.com',
-      phone: '1234567890',
+      adtType: AdtType.A02,
     };
 
-    patientServiceMock.findByCpfOrFail.mockResolvedValueOnce({ id: '123' });
-    patientServiceMock.updatePatient.mockResolvedValueOnce({ id: '123', ...dto });
+    // act
+    await expect(() => service.processAdtMessage(dto)).rejects.toThrow(BadRequestException);
+  });
 
-    const result = await service.processAdtMessage(dto);
+  it.skip('should find an existing patient and create an encounter for A02 adtType', async () => {
+        // arrange
+        const dto: AdtMessageDto = {
+          adtType: AdtType.A02,
+          cpf: '1234567890',
+          ward: 'ICU',
+          transferDate: '2023-04-01',
+        };
 
-    expect(patientServiceMock.findByCpfOrFail).toHaveBeenCalledWith('12345678901');
-    expect(patientServiceMock.updatePatient).toHaveBeenCalledWith('123', {
+        patientServiceMock.findByCpfOrFail.mockResolvedValueOnce({
+          id: 'patientId',
+          name: 'John Doe',
+          birthDate: new Date('1990-01-01'),
+          cpf: '1234567890',
+          sex: Sex.M,
+          email: null,
+          phone: null,
+          active: true,
+          created_at: new Date(),
+          updated_at: new Date(),
+          encounters: [],
+        });
+
+        encounterRepositoryMock.findActiveByPatient.mockResolvedValueOnce({
+          id: 'encounterId',
+          patientId: 'patientId',
+          adtType: AdtType.A01,
+          status: EncounterStatus.ADMITTED,
+          ward: null,
+          admitDate: new Date('2023-04-01'),
+          transferDate: null,
+          dischargeDate: null,
+          created_at: new Date(),
+          updated_at: new Date(),
+          patient: {
+            id: 'patientId',
+            name: 'John Doe',
+            birthDate: new Date('1990-01-01'),
+            cpf: '1234567890',
+            sex: Sex.M,
+            email: null,
+            phone: null,
+            active: true,
+            created_at: new Date(),
+            updated_at: new Date(),
+            encounters: [],
+          },
+          orders: [],
+        });
+
+        // act
+        const result = await service.processAdtMessage(dto);
+
+        // assert
+        expect(patientServiceMock.findByCpfOrFail).toHaveBeenCalledWith(dto.cpf);
+        expect(encounterRepositoryMock.findActiveByPatient).toHaveBeenCalledWith('patientId');
+        expect(encounterRepositoryMock.create).toHaveBeenCalledWith({
+          patientId: 'patientId',
+          adtType: AdtType.A02,
+          admitDate: null,
+          ward: dto.ward,
+          transferDate: dto.transferDate,
+        });
+        expect(result).toEqual({
+          patient: {
+            id: 'patientId',
+            name: 'John Doe',
+            birthDate: new Date('1990-01-01'),
+            cpf: '1234567890',
+            sex: Sex.M,
+            email: null,
+            phone: null,
+            active: true,
+            created_at: new Date(),
+            updated_at: new Date(),
+            encounters: [],
+          },
+          encounter: {
+            id: 'encounterId',
+            patientId: 'patientId',
+            adtType: AdtType.A02,
+            status: EncounterStatus.TRANSFERRED,
+            ward: dto.ward,
+            transferDate: dto.transferDate,
+            admitDate: null,
+            dischargeDate: null,
+            created_at: new Date(),
+            updated_at: new Date(),
+            patient: {
+              id: 'patientId',
+              name: 'John Doe',
+              birthDate: new Date('1990-01-01'),
+              cpf: '1234567890',
+              sex: Sex.M,
+              email: null,
+              phone: null,
+              active: true,
+              created_at: new Date(),
+              updated_at: new Date(),
+              encounters: [],
+            },
+            orders: [],
+          },
+        });
+      });
+
+  it('should throw NotFoundException when no active encounter is found for A02 adtType', async () => {
+    // arrange
+    const dto: AdtMessageDto = {
+      adtType: AdtType.A02,
+      cpf: '1234567890',
+      ward: 'ICU',
+      transferDate: '2023-04-01',
+    };
+
+    patientServiceMock.findByCpfOrFail.mockResolvedValueOnce({
+      id: 'patientId',
       name: 'John Doe',
-      birthDate: '1990-01-01',
+      birthDate: new Date('1990-01-01'),
+      cpf: '1234567890',
       sex: Sex.M,
-      email: 'john.doe@example.com',
-      phone: '1234567890',
+      email: null,
+      phone: null,
+      active: true,
+      created_at: new Date(),
+      updated_at: new Date(),
+      encounters: [],
     });
-    expect(result).toEqual({
-      patient: { id: '123', ...dto },
+
+    encounterRepositoryMock.findActiveByPatient.mockResolvedValueOnce(null);
+
+    // act
+    await expect(() => service.processAdtMessage(dto)).rejects.toThrow(NotFoundException);
+  });
+
+  it('should throw BadRequestException when dto.adtType is A03 and required fields are missing', async () => {
+    // arrange
+    const dto: AdtMessageDto = {
+      adtType: AdtType.A03,
+    };
+
+    // act
+    await expect(() => service.processAdtMessage(dto)).rejects.toThrow(BadRequestException);
+  });
+
+  it.skip('should find an existing patient and create an encounter for A03 adtType', async () => {
+        // arrange
+        const dto: AdtMessageDto = {
+          adtType: AdtType.A03,
+          cpf: '1234567890',
+          dischargeDate: '2023-04-01',
+        };
+
+        patientServiceMock.findByCpfOrFail.mockResolvedValueOnce({
+          id: 'patientId',
+          name: 'John Doe',
+          birthDate: new Date('1990-01-01'),
+          cpf: '1234567890',
+          sex: Sex.M,
+          email: null,
+          phone: null,
+          active: true,
+          created_at: new Date(),
+          updated_at: new Date(),
+          encounters: [],
+        });
+
+        encounterRepositoryMock.findActiveByPatient.mockResolvedValueOnce({
+          id: 'encounterId',
+          patientId: 'patientId',
+          adtType: AdtType.A01,
+          status: EncounterStatus.ADMITTED,
+          ward: null,
+          admitDate: new Date('2023-04-01'),
+          transferDate: null,
+          dischargeDate: null,
+          created_at: new Date(),
+          updated_at: new Date(),
+          patient: {
+            id: 'patientId',
+            name: 'John Doe',
+            birthDate: new Date('1990-01-01'),
+            cpf: '1234567890',
+            sex: Sex.M,
+            email: null,
+            phone: null,
+            active: true,
+            created_at: new Date(),
+            updated_at: new Date(),
+            encounters: [],
+          },
+          orders: [],
+        });
+
+        // act
+        const result = await service.processAdtMessage(dto);
+
+        // assert
+        expect(patientServiceMock.findByCpfOrFail).toHaveBeenCalledWith(dto.cpf);
+        expect(encounterRepositoryMock.findActiveByPatient).toHaveBeenCalledWith('patientId');
+        expect(encounterRepositoryMock.create).toHaveBeenCalledWith({
+          patientId: 'patientId',
+          adtType: AdtType.A03,
+          admitDate: null,
+          ward: null,
+          transferDate: null,
+          dischargeDate: dto.dischargeDate,
+        });
+        expect(result).toEqual({
+          patient: {
+            id: 'patientId',
+            name: 'John Doe',
+            birthDate: new Date('1990-01-01'),
+            cpf: '1234567890',
+            sex: Sex.M,
+            email: null,
+            phone: null,
+            active: true,
+            created_at: new Date(),
+            updated_at: new Date(),
+            encounters: [],
+          },
+          encounter: {
+            id: 'encounterId',
+            patientId: 'patientId',
+            adtType: AdtType.A03,
+            status: EncounterStatus.DISCHARGED,
+            ward: null,
+            admitDate: null,
+            transferDate: null,
+            dischargeDate: dto.dischargeDate,
+            created_at: new Date(),
+            updated_at: new Date(),
+            patient: {
+              id: 'patientId',
+              name: 'John Doe',
+              birthDate: new Date('1990-01-01'),
+              cpf: '1234567890',
+              sex: Sex.M,
+              email: null,
+              phone: null,
+              active: true,
+              created_at: new Date(),
+              updated_at: new Date(),
+              encounters: [],
+            },
+            orders: [],
+          },
+        });
+      });
+
+  it('should throw NotFoundException when no active encounter is found for A03 adtType', async () => {
+    // arrange
+    const dto: AdtMessageDto = {
+      adtType: AdtType.A03,
+      cpf: '1234567890',
+      dischargeDate: '2023-04-01',
+    };
+
+    patientServiceMock.findByCpfOrFail.mockResolvedValueOnce({
+      id: 'patientId',
+      name: 'John Doe',
+      birthDate: new Date('1990-01-01'),
+      cpf: '1234567890',
+      sex: Sex.M,
+      email: null,
+      phone: null,
+      active: true,
+      created_at: new Date(),
+      updated_at: new Date(),
+      encounters: [],
     });
+
+    encounterRepositoryMock.findActiveByPatient.mockResolvedValueOnce(null);
+
+    // act
+    await expect(() => service.processAdtMessage(dto)).rejects.toThrow(NotFoundException);
+  });
+
+  it.skip('should update patient and return updated patient for A08 adtType', async () => {
+          // arrange
+          const dto: AdtMessageDto = {
+            adtType: AdtType.A08,
+            cpf: '1234567890',
+            name: 'John Doe',
+            birthDate: '1990-01-01',
+            sex: Sex.M,
+            email: 'john.doe@example.com',
+            phone: '1234567890',
+          };
+
+          patientServiceMock.findByCpfOrFail.mockResolvedValueOnce({
+            id: 'patientId',
+            name: 'John Doe',
+            birthDate: new Date('1990-01-01'),
+            cpf: '1234567890',
+            sex: Sex.M,
+            email: 'john.doe@example.com',
+            phone: '1234567890',
+            active: true,
+            created_at: new Date(),
+            updated_at: new Date(),
+            encounters: [],
+          });
+
+          patientServiceMock.updatePatient.mockResolvedValueOnce({
+            id: 'patientId',
+            name: 'John Doe',
+            birthDate: new Date('1990-01-01'),
+            cpf: '1234567890',
+            sex: Sex.M,
+            email: 'john.doe@example.com',
+            phone: '1234567890',
+            active: true,
+            created_at: new Date(),
+            updated_at: new Date(),
+            encounters: [],
+          });
+
+          // act
+          const result = await service.processAdtMessage(dto);
+
+          // assert
+          expect(patientServiceMock.findByCpfOrFail).toHaveBeenCalledWith(dto.cpf);
+          expect(patientServiceMock.updatePatient).toHaveBeenCalledWith('patientId', {
+            name: dto.name,
+            birthDate: dto.birthDate,
+            sex: dto.sex,
+            email: dto.email,
+            phone: dto.phone,
+          });
+          expect(result).toEqual({
+            patient: {
+              id: 'patientId',
+              name: 'John Doe',
+              birthDate: new Date('1990-01-01'),
+              cpf: '1234567890',
+              sex: Sex.M,
+              email: 'john.doe@example.com',
+              phone: '1234567890',
+              active: true,
+              created_at: new Date(),
+              updated_at: new Date(),
+              encounters: [],
+            },
+            encounter: undefined,
+          });
+        });
+
+
+  it('should throw BadRequestException when dto.adtType is A08 and at least one field to update is missing', async () => {
+    // arrange
+    const dto: AdtMessageDto = {
+      adtType: AdtType.A08,
+      cpf: '1234567890',
+    };
+
+    // act
+    await expect(() => service.processAdtMessage(dto)).rejects.toThrow(BadRequestException);
   });
 });
 });
 
   describe('FN_updateEncounter_END', () => {
 describe('updateEncounter', () => {
-  it.skip('should throw BadRequestException when encounter is DISCHARGED', async () => {
-          // arrange
-          const encounterRepositoryMock = {
-            findById: jest.fn().mockResolvedValue({
-              id: '1',
-              status: EncounterStatus.DISCHARGED,
-            }),
-          } as unknown as jest.Mocked<EncounterRepository>;
+  it('should throw BadRequestException when encounter is DISCHARGED', async () => {
+    encounterRepositoryMock.findById.mockResolvedValueOnce({ status: EncounterStatus.DISCHARGED });
+    await expect(service.updateEncounter('123', { admitDate: '2023-10-01' })).rejects.toThrow(BadRequestException);
+  });
 
-          const service = new EncounterService(encounterRepositoryMock, patientServiceMock);
-
-          // act
-          const result = await service.updateEncounter('1', { admitDate: '2023-10-01' });
-
-          // assert
-          expect(result).toBeUndefined();
-          expect(encounterRepositoryMock.findById).toHaveBeenCalledWith('1');
-          expect(() => service.updateEncounter('1', { admitDate: '2023-10-01' })).toThrow(
-            BadRequestException,
-          );
-        });
+  it('should throw NotFoundException when encounter is not found', async () => {
+      await expect(service.updateEncounter('123', { ward: 'ICU' })).rejects.toThrow(NotFoundException);
+    });
 
 
-  it.skip('should throw BadRequestException when admitDate is undefined', async () => {
-          // arrange
-          const encounterRepositoryMock = {
-            findById: jest.fn().mockResolvedValue({
-              id: '1',
-              status: EncounterStatus.ADMITTED,
-              admitDate: new Date(),
-            }),
-          } as unknown as jest.Mocked<EncounterRepository>;
-
-          const service = new EncounterService(encounterRepositoryMock, patientServiceMock);
-
-          // act
-          const result = await service.updateEncounter('1', { ward: 'ICU' });
-
-          // assert
-          expect(result).toBeUndefined();
-          expect(encounterRepositoryMock.findById).toHaveBeenCalledWith('1');
-          expect(encounterRepositoryMock.save).not.toHaveBeenCalled();
-          expect(() => service.updateEncounter('1', { ward: 'ICU' })).toThrow(
-            BadRequestException,
-          );
-        });
-
-
-  it.skip('should throw BadRequestException when encounter is not ADMITTED', async () => {
-        // arrange
-        const encounterRepositoryMock = {
-          findById: jest.fn().mockResolvedValue({
-            id: '1',
-            status: EncounterStatus.TRANSFERRED,
-          }),
-        } as unknown as jest.Mocked<EncounterRepository>;
-
-        const service = new EncounterService(encounterRepositoryMock, patientServiceMock);
-
-        // act
-        const result = await service.updateEncounter('1', { admitDate: '2023-10-01' });
-
-        // assert
-        expect(result).toBeUndefined();
-        expect(encounterRepositoryMock.findById).toHaveBeenCalledWith('1');
-        expect(encounterRepositoryMock.save).not.toHaveBeenCalled();
-        expect(() => service.updateEncounter('1', { admitDate: '2023-10-01' })).toThrow(
-          BadRequestException,
-        );
-      });
+  it('should throw BadRequestException when encounter is not ADMITTED', async () => {
+    encounterRepositoryMock.findById.mockResolvedValueOnce({ status: EncounterStatus.TRANSFERRED });
+    await expect(service.updateEncounter('123', { admitDate: '2023-10-01' })).rejects.toThrow(BadRequestException);
+  });
 
   it.skip('should throw BadRequestException when admitDate is a future date', async () => {
-          // arrange
-          const encounterRepositoryMock = {
-            findById: jest.fn().mockResolvedValue({
-              id: '1',
-              status: EncounterStatus.ADMITTED,
-              admitDate: new Date('2023-10-01'),
-            }),
-          } as unknown as jest.Mocked<EncounterRepository>;
-
-          const service = new EncounterService(encounterRepositoryMock, patientServiceMock);
-
-          // act
-          const result = await service.updateEncounter('1', { admitDate: '2024-10-01' });
-
-          // assert
-          expect(result).toBeUndefined();
-          expect(encounterRepositoryMock.findById).toHaveBeenCalledWith('1');
-          expect(encounterRepositoryMock.save).not.toHaveBeenCalled();
-          expect(() => service.updateEncounter('1', { admitDate: '2024-10-01' })).toThrow(
-            BadRequestException,
-          );
-        });
-
-
-  it.skip('should throw BadRequestException when admitDate is after transferDate', async () => {
-        // arrange
-        const encounterRepositoryMock = {
-          findById: jest.fn().mockResolvedValue({
-            id: '1',
-            status: EncounterStatus.ADMITTED,
-            transferDate: new Date('2023-10-01'),
-          }),
-        } as unknown as jest.Mocked<EncounterRepository>;
-
-        const service = new EncounterService(encounterRepositoryMock, patientServiceMock);
-
-        // act
-        const result = await service.updateEncounter('1', { admitDate: '2023-10-02' });
-
-        // assert
-        expect(result).toBeUndefined();
-        expect(encounterRepositoryMock.findById).toHaveBeenCalledWith('1');
-        expect(encounterRepositoryMock.save).not.toHaveBeenCalled();
-        expect(() => service.updateEncounter('1', { admitDate: '2023-10-02' })).toThrow(
-          BadRequestException,
-        );
+        encounterRepositoryMock.findById.mockResolvedValueOnce({ status: EncounterStatus.ADMITTED });
+        await expect(service.updateEncounter('123', { admitDate: '2024-10-01' })).rejects.toThrow(BadRequestException);
       });
 
-  it.skip('should throw BadRequestException when dto.ward is the same as encounter.ward', async () => {
-        // arrange
-        const encounterRepositoryMock = {
-          findById: jest.fn().mockResolvedValue({
-            id: '1',
-            status: EncounterStatus.ADMITTED,
-            ward: Ward.ICU,
-          }),
-        } as unknown as jest.Mocked<EncounterRepository>;
+  it('should throw BadRequestException when admitDate is after transferDate', async () => {
+    encounterRepositoryMock.findById.mockResolvedValueOnce({
+      status: EncounterStatus.ADMITTED,
+      transferDate: new Date('2023-10-01'),
+    });
+    await expect(service.updateEncounter('123', { admitDate: '2023-10-10' })).rejects.toThrow(BadRequestException);
+  });
 
-        const service = new EncounterService(encounterRepositoryMock, patientServiceMock);
-
-        // act
-        const result = await service.updateEncounter('1', { ward: Ward.ICU });
-
-        // assert
-        expect(result).toBeUndefined();
-        expect(encounterRepositoryMock.findById).toHaveBeenCalledWith('1');
-        expect(encounterRepositoryMock.save).not.toHaveBeenCalled();
-        expect(() => service.updateEncounter('1', { ward: Ward.ICU })).toThrow(
-          BadRequestException,
-        );
-      });
+  it('should throw BadRequestException when dto.ward is already encounter.ward', async () => {
+    encounterRepositoryMock.findById.mockResolvedValueOnce({
+      status: EncounterStatus.ADMITTED,
+      ward: Ward.ICU,
+    });
+    await expect(service.updateEncounter('123', { ward: Ward.ICU })).rejects.toThrow(BadRequestException);
+  });
 });
 });
 

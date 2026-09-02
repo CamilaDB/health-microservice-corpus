@@ -32,6 +32,7 @@ RESULTS_CSV = METRICS_DIR / "results.csv"
 SERVICE_RESULTS_CSV = METRICS_DIR / "service_results.csv"
 GLOBAL_RESULTS_CSV = METRICS_DIR / "metrics_results.csv"
 MUTATION_RESULTS_CSV = METRICS_DIR / "mutation_results.csv"
+FUNCTION_MUTATION_RESULTS_CSV = METRICS_DIR / "mutation_function_results.csv"
 SMELL_RESULTS_CSV    = METRICS_DIR / "smell_results.csv"
 
 ERROR_EVENTS_CSV = METRICS_DIR / "error_events.csv"
@@ -54,11 +55,6 @@ MAX_RUNTIME_REPAIRS = int(os.getenv("MAX_RUNTIME_REPAIRS", '5'))
 MAX_TS_REPAIRS = int(os.getenv("MAX_TS_REPAIRS", '3'))
 
 MODELS = {
-    "gemma_4": {
-        "provider": "ollama",
-        "model": "gemma4:e2b",
-    },
-
     "qwen_coder_3b": {
         "provider": "ollama",
         "model": "qwen2.5-coder:3b",
@@ -69,9 +65,34 @@ MODELS = {
         "model": "qwen2.5-coder:7b",
     },
 
-    # "llama70b": {
-    #     "provider": "groq",
-    #     "model": "llama-3.3-70b-versatile",
+    "gemma_4": {
+        "provider": "ollama",
+        "model": "gemma4:e2b",
+    },
+
+    "qwen_4b": {
+        "provider": "ollama",
+        "model": "qwen3.5:4b",
+    },
+
+    "falcon_7b": {
+        "provider": "ollama",
+        "model": "falcon3:7b",
+    },
+
+    # "rnj_1_8b": {
+    #     "provider": "ollama",
+    #     "model": "rnj-1:8b",
+    # },
+
+    # "ministral_3b": {
+    #     "provider": "ollama",
+    #     "model": "ministral-3:3b",
+    # },
+
+    # "mistral_7b": {
+    #     "provider": "ollama",
+    #     "model": "mistral:7b",
     # },
 
     # "gpt_oss_120b": {

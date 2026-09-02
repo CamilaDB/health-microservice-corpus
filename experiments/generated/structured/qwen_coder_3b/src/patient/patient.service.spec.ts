@@ -50,38 +50,18 @@ describe('getPatientById', () => {
 
     // act: call the service method
     await expect(service.getPatientById('123')).rejects.toThrow(NotFoundException);
+
+    // assert: verify result or thrown exception
   });
 });
 });
 
   describe('FN_listPatients_END', () => {
 describe('listPatients', () => {
-  it('should return an empty array when no patients are found', async () => {
+  it('should return an array of patients', async () => {
     // arrange
-    patientRepositoryMock.findAll.mockResolvedValue([]);
-
-    // act
-    const result = await service.listPatients();
-
-    // assert
-    expect(result).toEqual([]);
-  });
-
-  it.skip('should throw a NotFoundException when no patients are found', async () => {
-        // arrange
-        patientRepositoryMock.findAll.mockResolvedValue([]);
-
-        // act
-        await expect(service.listPatients()).rejects.toThrow(NotFoundException);
-      });
-
-  it('should return all patients when found', async () => {
-    // arrange
-    const patients = [
-      { id: '1', name: 'John Doe', birthDate: new Date('1990-01-01'), cpf: '12345678901', sex: Sex.M, email: 'john.doe@example.com', phone: '1234567890', active: true, created_at: new Date(), updated_at: new Date(), encounters: [] },
-      { id: '2', name: 'Jane Doe', birthDate: new Date('1990-01-02'), cpf: '09876543210', sex: Sex.F, email: 'jane.doe@example.com', phone: '0987654321', active: true, created_at: new Date(), updated_at: new Date(), encounters: [] },
-    ];
-    patientRepositoryMock.findAll.mockResolvedValue(patients);
+    const patients = [{ id: '1', name: 'John Doe', birthDate: new Date(), cpf: '12345678901', sex: 'M', email: 'john.doe@example.com', phone: '1234567890', active: true, created_at: new Date(), updated_at: new Date(), encounters: [] }];
+    patientRepositoryMock.findAll.mockResolvedValueOnce(patients);
 
     // act
     const result = await service.listPatients();
@@ -89,18 +69,26 @@ describe('listPatients', () => {
     // assert
     expect(result).toEqual(patients);
   });
+
+  it.skip('should throw a NotFoundException if no patients are found', async () => {
+        // arrange
+        patientRepositoryMock.findAll.mockResolvedValueOnce([]);
+
+        // act
+        await expect(service.listPatients()).rejects.toThrow(NotFoundException);
+      });
 });
 });
 
   describe('FN_createPatient_END', () => {
 describe('createPatient', () => {
-  it('should throw ConflictException when CPF is already registered', async () => {
+  it('should throw ConflictException if CPF is already registered', async () => {
     const dto: CreatePatientDto = {
       name: 'John Doe',
       birthDate: '1990-01-01',
       cpf: '12345678901',
       sex: Sex.M,
-      email: 'johndoe@example.com',
+      email: 'john.doe@example.com',
     };
 
     patientRepositoryMock.findByCpf.mockResolvedValueOnce({ id: '123' });
@@ -108,13 +96,13 @@ describe('createPatient', () => {
     await expect(service.createPatient(dto)).rejects.toThrow(ConflictException);
   });
 
-  it('should throw ConflictException when email is already registered', async () => {
+  it('should throw ConflictException if email is already registered', async () => {
     const dto: CreatePatientDto = {
       name: 'John Doe',
       birthDate: '1990-01-01',
-      cpf: '12345678902',
+      cpf: '09876543210',
       sex: Sex.M,
-      email: 'johndoe@example.com',
+      email: 'john.doe@example.com',
     };
 
     patientRepositoryMock.findByEmail.mockResolvedValueOnce({ id: '123' });
@@ -126,9 +114,9 @@ describe('createPatient', () => {
       const dto: CreatePatientDto = {
         name: 'John Doe',
         birthDate: '1990-01-01',
-        cpf: '12345678903',
+        cpf: '09876543210',
         sex: Sex.M,
-        email: 'johndoe@example.com',
+        email: 'john.doe@example.com',
       };
 
       patientRepositoryMock.findByCpf.mockResolvedValueOnce(null);
@@ -139,12 +127,12 @@ describe('createPatient', () => {
       const result = await service.createPatient(dto);
 
       expect(result).toEqual({ id: '123' });
-      expect(patientRepositoryMock.findByCpf).toHaveBeenCalledWith('12345678903');
-      expect(patientRepositoryMock.findByEmail).toHaveBeenCalledWith('johndoe@example.com');
+      expect(patientRepositoryMock.findByCpf).toHaveBeenCalledWith('09876543210');
+      expect(patientRepositoryMock.findByEmail).toHaveBeenCalledWith('john.doe@example.com');
       expect(patientRepositoryMock.create).toHaveBeenCalledWith({
         ...dto,
-        cpf: '12345678903',
-        email: 'johndoe@example.com',
+        cpf: '09876543210',
+        email: 'john.doe@example.com',
         birthDate: new Date('1990-01-01'),
       });
       expect(patientRepositoryMock.save).toHaveBeenCalledWith({ id: '123' });
@@ -156,24 +144,73 @@ describe('createPatient', () => {
   describe('FN_updatePatient_END', () => {
 describe('updatePatient', () => {
   it.skip('should throw ConflictException when dto.email is already registered', async () => {
-        const dto: UpdatePatientDto = { email: 'existing@example.com' };
-        const patient: Patient = { id: '1', email: 'original@example.com' };
-        patientRepositoryMock.findByEmail.mockResolvedValueOnce(patient);
+          // arrange
+          const dto: UpdatePatientDto = {
+            email: 'existingemail@example.com',
+          };
+          const patient: Patient = { email: 'existingemail@example.com' };
+          patientRepositoryMock.findById.mockResolvedValue(patient);
+          patientRepositoryMock.findByEmail.mockResolvedValue(patient);
 
-        await expect(() => service.updatePatient('1', dto)).rejects.toThrow(
-          ConflictException,
-        );
-      });
+          // act
+          await expect(service.updatePatient('123', dto)).rejects.toThrow(
+            ConflictException,
+          );
 
-  it.skip('should update patient data correctly', async () => {
-        const dto: UpdatePatientDto = { name: 'John Doe', email: 'new@example.com' };
-        const patient: Patient = { id: '1', name: 'Jane Doe', email: 'original@example.com' };
-        patientRepositoryMock.findByEmail.mockResolvedValueOnce(null);
-        patientRepositoryMock.update.mockResolvedValueOnce(patient);
+          // assert
+          expect(patientRepositoryMock.findByEmail).toHaveBeenCalledWith(
+            'existingemail@example.com',
+          );
+        });
 
-        const result = await service.updatePatient('1', dto);
-        expect(result).toEqual(patient);
-      });
+
+  it('should update patient data correctly', async () => {
+    // arrange
+    const dto: UpdatePatientDto = {
+      name: 'John Doe',
+      sex: Sex.M,
+      phone: '1234567890',
+      active: false,
+      email: 'newemail@example.com',
+      birthDate: '1990-01-01',
+    };
+    const patient: Patient = {
+      id: '123',
+      name: 'Existing Name',
+      birthDate: new Date('1990-01-01'),
+      sex: Sex.F,
+      email: 'existingemail@example.com',
+      phone: '9876543210',
+      active: true,
+      created_at: new Date(),
+      updated_at: new Date(),
+      encounters: [],
+    };
+    patientRepositoryMock.findById.mockResolvedValue(patient);
+    patientRepositoryMock.findByEmail.mockResolvedValue(null);
+    patientRepositoryMock.update.mockResolvedValue(patient);
+
+    // act
+    const result = await service.updatePatient('123', dto);
+
+    // assert
+    expect(patientRepositoryMock.findById).toHaveBeenCalledWith('123');
+    expect(patientRepositoryMock.findByEmail).toHaveBeenCalledWith(
+      'newemail@example.com',
+    );
+    expect(patientRepositoryMock.update).toHaveBeenCalledWith(
+      patient,
+      {
+        ...(dto.name && { name: dto.name }),
+        ...(dto.sex && { sex: dto.sex }),
+        ...(dto.phone !== undefined && { phone: dto.phone }),
+        ...(dto.active !== undefined && { active: dto.active }),
+        ...(dto.email && { email: dto.email.toLowerCase() }),
+        ...(dto.birthDate && { birthDate: new Date(dto.birthDate) }),
+      },
+    );
+    expect(result).toEqual(patient);
+  });
 });
 });
 

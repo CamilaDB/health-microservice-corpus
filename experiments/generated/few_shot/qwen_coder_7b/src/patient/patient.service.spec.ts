@@ -51,7 +51,7 @@ describe('getPatientById', () => {
   });
 
   it('should return the patient when found', async () => {
-    const patient = { id: '1', name: 'John Doe', birthDate: new Date(), cpf: '12345678901', sex: Sex.M, email: 'john.doe@example.com', phone: '1234567890', active: true, created_at: new Date(), updated_at: new Date(), encounters: [] };
+    const patient = { id: '1', name: 'John Doe', birthDate: new Date(), cpf: '12345678901', sex: Sex.M, email: 'john@example.com', phone: '1234567890', active: true, created_at: new Date(), updated_at: new Date(), encounters: [] };
     patientRepositoryMock.findById.mockResolvedValueOnce(patient);
 
     const result = await service.getPatientById('1');
@@ -66,10 +66,10 @@ describe('listPatients', () => {
   it('should return all patients', async () => {
     const patients: Patient[] = [
       { id: '1', name: 'John Doe', birthDate: new Date(), cpf: '12345678901', sex: Sex.M, email: 'john@example.com', phone: '1234567890', active: true, created_at: new Date(), updated_at: new Date(), encounters: [] },
-      { id: '2', name: 'Jane Doe', birthDate: new Date(), cpf: '09876543210', sex: Sex.F, email: 'jane@example.com', phone: '0987654321', active: true, created_at: new Date(), updated_at: new Date(), encounters: [] }
+      { id: '2', name: 'Jane Doe', birthDate: new Date(), cpf: '09876543210', sex: Sex.F, email: 'jane@example.com', phone: '0987654321', active: true, created_at: new Date(), updated_at: new Date(), encounters: [] },
     ];
 
-    patientRepositoryMock.findAll.mockResolvedValue(patients);
+    patientRepositoryMock.findAll.mockResolvedValueOnce(patients);
 
     const result = await service.listPatients();
 
@@ -87,6 +87,7 @@ describe('createPatient', () => {
       birthDate: '1990-01-01',
       cpf: '123.456.789-00',
       sex: Sex.M,
+      email: 'john.doe@example.com',
     };
 
     patientRepositoryMock.findByCpf.mockResolvedValueOnce({
@@ -115,7 +116,7 @@ describe('createPatient', () => {
     patientRepositoryMock.findByCpf.mockResolvedValueOnce(null);
     patientRepositoryMock.findByEmail.mockResolvedValueOnce({
       id: '1',
-      email: 'johndoe@example.com',
+      email: 'john.doe@example.com',
     });
 
     await expect(service.createPatient(dto)).rejects.toThrow(
@@ -126,7 +127,7 @@ describe('createPatient', () => {
     expect(patientRepositoryMock.save).not.toHaveBeenCalled();
   });
 
-  it('should save and return the created patient', async () => {
+  it('should create and save the patient when CPF and email are unique', async () => {
       const dto = {
         name: 'John Doe',
         birthDate: '1990-01-01',
@@ -139,6 +140,7 @@ describe('createPatient', () => {
       patientRepositoryMock.findByEmail.mockResolvedValueOnce(null);
 
       const createdPatient = {
+        id: '1',
         ...dto,
         cpf: '12345678900',
         email: 'john.doe@example.com',
@@ -150,9 +152,14 @@ describe('createPatient', () => {
 
       const result = await service.createPatient(dto);
 
-      expect(patientRepositoryMock.create).toHaveBeenCalledWith(createdPatient);
-      expect(patientRepositoryMock.save).toHaveBeenCalledWith(createdPatient);
       expect(result).toEqual(createdPatient);
+      expect(patientRepositoryMock.create).toHaveBeenCalledWith({
+        ...dto,
+        cpf: '12345678900',
+        email: 'john.doe@example.com',
+        birthDate: new Date('1990-01-01'),
+      });
+      expect(patientRepositoryMock.save).toHaveBeenCalledWith(createdPatient);
     });
 
 });
@@ -163,11 +170,7 @@ describe('updatePatient', () => {
   it.skip('should throw ConflictException when email already exists', async () => {
         const patient = { id: '1', email: 'test@test.com' };
         patientRepositoryMock.findById.mockResolvedValueOnce(patient);
-
-        patientRepositoryMock.findByEmail.mockResolvedValueOnce({
-          id: '2',
-          email: 'test@test.com',
-        });
+        patientRepositoryMock.findByEmail.mockResolvedValueOnce({ id: '2', email: 'test@test.com' });
 
         await expect(
           service.updatePatient('1', { email: 'test@test.com' } as UpdatePatientDto),
@@ -179,19 +182,18 @@ describe('updatePatient', () => {
   it('should update and return the patient when email is unique', async () => {
     const patient = { id: '1', email: 'test@test.com' };
     patientRepositoryMock.findById.mockResolvedValueOnce(patient);
-
     patientRepositoryMock.findByEmail.mockResolvedValueOnce(null);
 
     const updateData: Partial<Patient> = {
       email: 'new@test.com',
     };
 
-    patientRepositoryMock.update.mockResolvedValueOnce({ ...patient, ...updateData });
+    patientRepositoryMock.update.mockResolvedValueOnce({ affected: 1 });
 
     const result = await service.updatePatient('1', { email: 'new@test.com' } as UpdatePatientDto);
 
     expect(patientRepositoryMock.update).toHaveBeenCalledWith(patient, updateData);
-    expect(result).toEqual({ ...patient, ...updateData });
+    expect(result).toEqual({ affected: 1 });
   });
 
   it('should update and return the patient when no email is provided', async () => {
@@ -202,12 +204,12 @@ describe('updatePatient', () => {
       name: 'New Name',
     };
 
-    patientRepositoryMock.update.mockResolvedValueOnce({ ...patient, ...updateData });
+    patientRepositoryMock.update.mockResolvedValueOnce({ affected: 1 });
 
     const result = await service.updatePatient('1', { name: 'New Name' } as UpdatePatientDto);
 
     expect(patientRepositoryMock.update).toHaveBeenCalledWith(patient, updateData);
-    expect(result).toEqual({ ...patient, ...updateData });
+    expect(result).toEqual({ affected: 1 });
   });
 
   it('should throw NotFoundException when patient does not exist', async () => {

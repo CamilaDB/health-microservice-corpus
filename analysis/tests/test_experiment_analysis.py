@@ -20,12 +20,15 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import experiment_analysis as ea  # noqa: E402
 
-# _enforce_single_run defaults EXPERIMENT_RUN_ID to the frozen run's id when
-# the env var is unset, so every loader filters down to that run_id by
-# default in production. Synthetic fixtures in this file use a placeholder
-# run_id ("run-TEST") instead, so EXPERIMENT_RUN_ID is pointed at that
-# placeholder for the whole test module and restored afterward -- this
-# does not change production behavior, only what these tests load.
+# _enforce_single_run auto-selects the run_id when a CSV holds exactly one
+# (see RunIdAutoSelectionTests) and raises when it holds more than one and
+# EXPERIMENT_RUN_ID is unset -- it has no hardcoded fallback run_id.
+# Synthetic fixtures in this file use a placeholder run_id ("run-TEST"), so
+# EXPERIMENT_RUN_ID is pointed at that placeholder for the whole test module
+# and restored afterward -- this does not change production behavior, only
+# what these tests load. (Auto-selection would work here too since each
+# fixture file has a single run_id, but pinning it explicitly keeps every
+# other test in this module independent of that behavior.)
 _ORIGINAL_RUN_ID_ENV = os.environ.get("EXPERIMENT_RUN_ID")
 
 
@@ -235,16 +238,97 @@ class MutationSummaryWeightingTests(unittest.TestCase):
                                    row["mutation_score_stryker_unweighted_mean"], places=2)
 
 
+class FunctionMutationH2Tests(unittest.TestCase):
+    """
+    Analysis-layer consumption of mutation_function_results.csv (the real
+    per-mutant re-slice from execution/stryker_runner.py:
+    map_mutants_to_functions -- see runner/tests/test_stryker_function_
+    mapping.py for the mapping logic itself). Never a fabricated/
+    proportional split: these rows are exactly what stryker_runner.py
+    would persist.
+    """
+
+    def _rows(self):
+        return [
+            {"run_id": "run-TEST", "model": "m", "strategy": "s", "module": "a",
+             "fn_id": "FN_low_END", "function": "low", "ccm": 3, "range": "low",
+             "mutants_total": 10, "mutants_killed": 9, "mutants_killed_by_own_tests": 9,
+             "mutants_killed_by_other_function_tests": 0, "mutants_survived": 1,
+             "mutants_no_coverage": 0, "mutants_timeout": 0, "mutants_compile_error": 0,
+             "mutants_unmapped_in_module": 0},
+            {"run_id": "run-TEST", "model": "m", "strategy": "s", "module": "a",
+             "fn_id": "FN_high_END", "function": "high", "ccm": 25, "range": "high",
+             "mutants_total": 10, "mutants_killed": 1, "mutants_killed_by_own_tests": 1,
+             "mutants_killed_by_other_function_tests": 0, "mutants_survived": 0,
+             "mutants_no_coverage": 9, "mutants_timeout": 0, "mutants_compile_error": 0,
+             "mutants_unmapped_in_module": 0},
+        ]
+
+    def test_load_adds_corrected_score_and_no_coverage_share(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "mutation_function_results.csv"
+            _write_csv(path, self._rows())
+            df = ea.load_function_mutation_results(path)
+
+        low = df[df["fn_id"] == "FN_low_END"].iloc[0]
+        # corrected: 9 / (9+1+0+0) = 90.0
+        self.assertAlmostEqual(low["mutation_score_corrected"], 90.0, places=2)
+        self.assertAlmostEqual(low["no_coverage_share"], 0.0, places=2)
+
+        high = df[df["fn_id"] == "FN_high_END"].iloc[0]
+        # corrected: 1 / (1+0+9+0) = 10.0 -- dominated by no_coverage.
+        self.assertAlmostEqual(high["mutation_score_corrected"], 10.0, places=2)
+        self.assertAlmostEqual(high["no_coverage_share"], 90.0, places=2)
+
+    def test_missing_file_returns_empty_frame_not_an_error(self):
+        df = ea.load_function_mutation_results(Path("does/not/exist.csv"))
+        self.assertTrue(df.empty)
+
+    def test_h2_mutation_by_ccm_model_is_weighted_not_averaged(self):
+        # Two functions in the SAME model x ccm_band, very different sizes
+        # -- must be summed then scored, not averaged as percentages.
+        rows = [
+            {"run_id": "run-TEST", "model": "m", "strategy": "s", "module": "a",
+             "fn_id": "FN_a_END", "function": "a", "ccm": 3, "range": "low",
+             "mutants_total": 900, "mutants_killed": 900, "mutants_killed_by_own_tests": 900,
+             "mutants_killed_by_other_function_tests": 0, "mutants_survived": 0,
+             "mutants_no_coverage": 0, "mutants_timeout": 0, "mutants_compile_error": 0,
+             "mutants_unmapped_in_module": 0},
+            {"run_id": "run-TEST", "model": "m", "strategy": "s", "module": "a",
+             "fn_id": "FN_b_END", "function": "b", "ccm": 4, "range": "low",
+             "mutants_total": 100, "mutants_killed": 0, "mutants_killed_by_own_tests": 0,
+             "mutants_killed_by_other_function_tests": 0, "mutants_survived": 0,
+             "mutants_no_coverage": 100, "mutants_timeout": 0, "mutants_compile_error": 0,
+             "mutants_unmapped_in_module": 0},
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "mutation_function_results.csv"
+            _write_csv(path, rows)
+            df = ea.load_function_mutation_results(path)
+
+        # Mirrors build_h2_coverage_by_model_ccm's own established
+        # behavior: observed=False on the categorical CCM-band groupby
+        # yields a row for every band, not just populated ones -- an
+        # empty band's mutants_total is legitimately 0, not fabricated.
+        summary = ea.build_h2_mutation_by_ccm_model(df)
+        row = summary[summary["ccm_band"] == "1-5"].iloc[0]
+        self.assertEqual(row["distinct_functions"], 2)
+        self.assertEqual(row["mutants_total"], 1000)
+        # weighted: 900 / (900+0+100+0) = 90.0, NOT the (100+0)/2 = 50 average
+        self.assertAlmostEqual(row["mutation_score_corrected"], 90.0, places=2)
+
+    def test_empty_input_returns_empty_frame(self):
+        summary = ea.build_h2_mutation_by_ccm_model(pd.DataFrame())
+        self.assertTrue(summary.empty)
+
+
 class RunIdContaminationGuardTests(unittest.TestCase):
     """
     Phase 2: mutation/smell loaders must not silently mix two runs.
 
-    _enforce_single_run defaults EXPERIMENT_RUN_ID to the frozen run's id
-    when the env var is unset, so these two tests explicitly clear it to
-    exercise the "multiple run_ids, none requested" branch specifically --
-    otherwise both rows below (neither matching the frozen default) would
-    simply be filtered to empty, which also raises ValueError but for a
-    different, less precise reason.
+    These two tests explicitly clear EXPERIMENT_RUN_ID (the module-level
+    setUpModule pins it to "run-TEST") to exercise the "multiple run_ids,
+    none requested" branch of _enforce_single_run directly.
     """
 
     def setUp(self):
@@ -291,6 +375,95 @@ class RunIdContaminationGuardTests(unittest.TestCase):
             _write_csv(path, rows)
             with self.assertRaises(ValueError):
                 ea.load_smell_results(path)
+
+
+class RunIdAutoSelectionTests(unittest.TestCase):
+    """
+    _enforce_single_run must have no hardcoded fallback run_id: a single
+    run_id in the CSV is safe to auto-select when EXPERIMENT_RUN_ID is
+    unset, but two or more must fail loudly rather than silently pick one
+    -- see analysis/experiment_analysis.py::_enforce_single_run.
+    """
+
+    def setUp(self):
+        self._prior_env = os.environ.pop("EXPERIMENT_RUN_ID", None)
+
+    def tearDown(self):
+        if self._prior_env is not None:
+            os.environ["EXPERIMENT_RUN_ID"] = self._prior_env
+
+    def _mutation_row(self, run_id):
+        return {
+            "run_id": run_id, "model": "m", "strategy": "s", "module": "a",
+            "source_file": "a.ts", "test_output_file": "a.spec.ts",
+            "mutants_total": 10, "mutants_killed": 5, "mutants_survived": 5,
+            "mutants_timeout": 0, "mutants_no_coverage": 0, "mutants_compile_error": 0,
+            "mutation_score": 50.0,
+        }
+
+    def test_single_run_id_auto_selected_when_env_unset(self):
+        rows = [self._mutation_row("run-ONLY")]
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "mutation_results.csv"
+            _write_csv(path, rows)
+            df = ea.load_mutation_results(path)
+            self.assertEqual(set(df["run_id"]), {"run-ONLY"})
+
+    def test_frozen_run_id_is_not_a_hidden_default(self):
+        # A CSV that does NOT contain the historically-hardcoded default
+        # run_id must still auto-select cleanly on its own single run_id --
+        # proves there is no leftover fallback constant filtering it out.
+        rows = [self._mutation_row("run-SOME-OTHER-RUN")]
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "mutation_results.csv"
+            _write_csv(path, rows)
+            df = ea.load_mutation_results(path)
+            self.assertEqual(set(df["run_id"]), {"run-SOME-OTHER-RUN"})
+
+    def test_multiple_run_ids_without_env_var_raises(self):
+        rows = [self._mutation_row("run-A"), self._mutation_row("run-B")]
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "mutation_results.csv"
+            _write_csv(path, rows)
+            with self.assertRaises(ValueError):
+                ea.load_mutation_results(path)
+
+    def test_explicit_env_var_selects_only_that_run_among_several(self):
+        rows = [self._mutation_row("run-A"), self._mutation_row("run-B")]
+        os.environ["EXPERIMENT_RUN_ID"] = "run-B"
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "mutation_results.csv"
+            _write_csv(path, rows)
+            df = ea.load_mutation_results(path)
+            self.assertEqual(set(df["run_id"]), {"run-B"})
+
+    def test_enforce_single_run_false_returns_every_run_unfiltered(self):
+        # The dashboard's own run selector (analysis/dashboard.py) needs
+        # the full multi-run frame to populate its dropdown -- it must not
+        # be raised out of before it gets a chance to filter by run_id
+        # itself. See dashboard.py's get_results/get_mutation/get_smell/
+        # get_errors_raw, which all pass enforce_single_run=False.
+        rows = [self._mutation_row("run-A"), self._mutation_row("run-B")]
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "mutation_results.csv"
+            _write_csv(path, rows)
+            df = ea.load_mutation_results(path, enforce_single_run=False)
+            self.assertEqual(set(df["run_id"]), {"run-A", "run-B"})
+
+    def test_enforce_single_run_false_on_results_csv_does_not_raise(self):
+        rows = [
+            {"model": "m", "strategy": "s", "module": "a", "function": "f",
+             "fn_id": "FN_f_END", "run_id": "run-A", "analysis_eligible": True,
+             "passed_tests": 1, "failed_tests": 0, "pending_tests": 0, "total_tests": 1},
+            {"model": "m", "strategy": "s", "module": "a", "function": "f",
+             "fn_id": "FN_f_END", "run_id": "run-B", "analysis_eligible": True,
+             "passed_tests": 1, "failed_tests": 0, "pending_tests": 0, "total_tests": 1},
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "results.csv"
+            _write_csv(path, rows)
+            df = ea.load_results(path, enforce_single_run=False)
+            self.assertEqual(set(df["run_id"]), {"run-A", "run-B"})
 
 
 class SmellMeasurableTests(unittest.TestCase):
