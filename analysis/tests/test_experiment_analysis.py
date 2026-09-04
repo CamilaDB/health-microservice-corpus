@@ -311,7 +311,7 @@ class FunctionMutationH2Tests(unittest.TestCase):
         # yields a row for every band, not just populated ones -- an
         # empty band's mutants_total is legitimately 0, not fabricated.
         summary = ea.build_h2_mutation_by_ccm_model(df)
-        row = summary[summary["ccm_band"] == "1-5"].iloc[0]
+        row = summary[summary["ccm_band"] == "1-4"].iloc[0]
         self.assertEqual(row["distinct_functions"], 2)
         self.assertEqual(row["mutants_total"], 1000)
         # weighted: 900 / (900+0+100+0) = 90.0, NOT the (100+0)/2 = 50 average
@@ -603,7 +603,7 @@ class H2AggregationTests(unittest.TestCase):
     def test_each_function_belongs_to_exactly_one_ccm_band(self):
         df = self._load()
         banded = ea._add_ccm_band(df)
-        # ccm=3 -> "1-5" only; ccm=25 -> ">20" only; never both, never NaN.
+        # ccm=3 -> "1-4" only; ccm=25 -> "≥20" only; never both, never NaN.
         for fn_id, group in banded.groupby("fn_id"):
             bands = group["ccm_band"].unique()
             self.assertEqual(len(bands), 1, f"{fn_id} spans more than one band: {bands}")
@@ -612,7 +612,7 @@ class H2AggregationTests(unittest.TestCase):
     def test_model_strategy_groups_retain_expected_function_set(self):
         df = self._load()
         table = ea.build_h2_coverage_table(df)
-        gemma_low = table[(table["model"] == "gemma_4") & (table["ccm_band"] == "1-5")].iloc[0]
+        gemma_low = table[(table["model"] == "gemma_4") & (table["ccm_band"] == "1-4")].iloc[0]
         self.assertEqual(gemma_low["attempted_observations"], 1)
         self.assertEqual(gemma_low["verified_observations"], 1)
         self.assertEqual(gemma_low["distinct_functions"], 1)
@@ -620,7 +620,7 @@ class H2AggregationTests(unittest.TestCase):
     def test_fully_skipped_is_never_silently_zero_filled(self):
         df = self._load()
         table = ea.build_h2_coverage_table(df)
-        cell = table[(table["model"] == "qwen_coder_3b") & (table["strategy"] == "few_shot") & (table["ccm_band"] == ">20")]
+        cell = table[(table["model"] == "qwen_coder_3b") & (table["strategy"] == "few_shot") & (table["ccm_band"] == "≥20")]
         self.assertEqual(len(cell), 1)
         row = cell.iloc[0]
         self.assertEqual(row["attempted_observations"], 1)
@@ -646,7 +646,7 @@ class H2AggregationTests(unittest.TestCase):
         # qwen_coder_3b/>20: 1 verified (zero_shot) + 1 fully-skipped
         # (few_shot, excluded) -- mean must come from the single verified
         # observation only (40.0), not be diluted by the skipped one.
-        row = table[(table["model"] == "qwen_coder_3b") & (table["ccm_band"] == ">20")].iloc[0]
+        row = table[(table["model"] == "qwen_coder_3b") & (table["ccm_band"] == "≥20")].iloc[0]
         self.assertEqual(row["verified_observations"], 1)
         self.assertAlmostEqual(row["mean_statement_coverage"], 40.0, places=2)
 
@@ -677,8 +677,8 @@ class H2SmellAggregationTests(unittest.TestCase):
             smell = ea.load_smell_results(path)
 
         table = ea.build_h2_smell_table(smell)
-        low_cell = table[table["ccm_band"] == "1-5"].iloc[0]
-        high_cell = table[table["ccm_band"] == ">20"].iloc[0]
+        low_cell = table[table["ccm_band"] == "1-4"].iloc[0]
+        high_cell = table[table["ccm_band"] == "≥20"].iloc[0]
 
         self.assertEqual(low_cell["measurable_observations"], 1)
         self.assertAlmostEqual(low_cell["mean_assertion_roulette_rate"], 100.0, places=2)

@@ -42,6 +42,13 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import pandas as pd
 
+# Institution thesis formatting standard, set once globally so every Text
+# artist created anywhere below (axis/tick labels, legends) picks it up
+# automatically -- Arial where available, Liberation Sans as the metrically
+# compatible fallback when Arial isn't installed in the environment.
+matplotlib.rcParams["font.family"] = "sans-serif"
+matplotlib.rcParams["font.sans-serif"] = ["Arial", "Liberation Sans", "DejaVu Sans"]
+
 ROOT_DIR = Path(__file__).resolve().parent.parent
 RESULTS_CSV = ROOT_DIR / "experiments" / "metrics" / "results.csv"
 OUTPUT_DIR = ROOT_DIR / "experiments" / "analysis"
@@ -90,7 +97,7 @@ NUMERIC_COLUMNS = [
 ]
 
 CCM_BINS = [0, 5, 10, 20, float("inf")]
-CCM_LABELS = ["1-5", "6-10", "11-20", ">20"]
+CCM_LABELS = ["1-4", "5-9", "10-19", "≥20"]
 
 
 def _as_bool(series: pd.Series) -> pd.Series:
@@ -360,11 +367,11 @@ def build_ccm_band_population(df: pd.DataFrame) -> pd.DataFrame:
 
 MODEL_SIZE_ORDER = ["gemma_4", "qwen_coder_3b", "qwen_4b", "falcon_7b", "qwen_coder_7b"]
 MODEL_SIZE_LABELS = {
-    "gemma_4": "gemma_4 (gemma4:e2b)",
-    "qwen_coder_3b": "qwen_coder_3b (qwen2.5-coder:3b)",
-    "qwen_4b": "qwen_4b (qwen3.5:4b)",
-    "falcon_7b": "falcon_7b (falcon3:7b)",
-    "qwen_coder_7b": "qwen_coder_7b (qwen2.5-coder:7b)",
+    "gemma_4": "gemma4:e2b",
+    "qwen_coder_3b": "qwen2.5-coder:3b",
+    "qwen_4b": "qwen3.5:4b",
+    "falcon_7b": "falcon3:7b",
+    "qwen_coder_7b": "qwen2.5-coder:7b",
 }
 MODEL_PALETTE = {
     "gemma_4": "#4c956c",
@@ -649,6 +656,36 @@ def export_smell_tables(df: pd.DataFrame) -> dict[str, Path]:
     return outputs
 
 
+def apply_thesis_chart_style(ax: plt.Axes) -> None:
+    ax.set_title("")
+    ax.grid(False)
+
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    for side in ("bottom", "left"):
+        ax.spines[side].set_visible(True)
+        ax.spines[side].set_color("black")
+        ax.spines[side].set_linewidth(1.5)
+
+    ax.set_facecolor("white")
+    ax.figure.patch.set_facecolor("white")
+
+    ax.tick_params(labelsize=11)
+    ax.xaxis.label.set_size(11)
+    ax.yaxis.label.set_size(11)
+    for tick_label in ax.get_xticklabels() + ax.get_yticklabels():
+        tick_label.set_fontsize(11)
+
+    legend = ax.get_legend()
+    if legend is not None:
+        legend.get_frame().set_facecolor("white")
+        legend.get_frame().set_edgecolor("none")
+        for text in legend.get_texts():
+            text.set_fontsize(11)
+        if legend.get_title() is not None:
+            legend.get_title().set_fontsize(11)
+
+
 def plot_smell_rates(df: pd.DataFrame, output_path: Path) -> None:
     if df.empty:
         return
@@ -660,24 +697,20 @@ def plot_smell_rates(df: pd.DataFrame, output_path: Path) -> None:
     fig, ax = plt.subplots(figsize=(10, 6.5))
     ax.bar(labels, use_df["assertion_roulette_rate"], label="Assertion Roulette (%)")
     ax.bar(labels, use_df["empty_test_rate"], label="Empty Test (%)", alpha=0.7)
-    ax.set_title(
-        "Taxa de smells por modelo e estratégia\n"
-        "(observações totalmente skip-repaired excluídas; empty_test_rate = 0% em todo o dataset)"
-    )
     ax.set_ylabel("Taxa (%) entre testes ativos")
     ax.set_ylim(0, max(100, float(use_df["assertion_roulette_rate"].max()) + 12))
-    ax.legend(loc="upper left", bbox_to_anchor=(1.01, 1))
-    ax.grid(axis="y", linestyle="--", alpha=0.3)
+    ax.legend()
     for i, excluded in enumerate(use_df["unmeasurable_functions"]):
         if excluded:
             ax.annotate(f"{excluded} excl.", (i, 2), ha="center", fontsize=7, color="#666", rotation=90)
-    plt.figtext(
-        0.01, 0.01,
-        "\"N excl.\" = observações totalmente skip-repaired (não mensuráveis), excluídas do "
-        "denominador desta barra -- não uma taxa negativa.",
-        fontsize=7.5, color="#666",
-    )
+    # plt.figtext(
+    #     0.01, 0.01,
+    #     "\"N excl.\" = observações totalmente skip-repaired (não mensuráveis), excluídas do "
+    #     "denominador desta barra -- não uma taxa negativa.",
+    #     fontsize=7.5, color="#666",
+    # )
     plt.xticks(rotation=45, ha="right")
+    apply_thesis_chart_style(ax)
     plt.tight_layout()
     fig.savefig(output_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
@@ -924,15 +957,11 @@ def plot_mutation_score(df: pd.DataFrame, output_path: Path) -> None:
     ax.bar(labels, summary["mutation_score_corrected"], color="#c44e52", label="Mutation score (corrected)")
     ax.plot(labels, summary["no_coverage_share"], color="#333333", marker="o", linewidth=1.5,
             label="No-coverage share (%)")
-    ax.set_title(
-        "Mutation score corrigido por modelo e estratégia\n"
-        "(denominador: killed+survived+no_coverage+timeout; compile_error excluído)"
-    )
     ax.set_ylabel("%")
     ax.set_ylim(0, 110)
     ax.legend()
-    ax.grid(axis="y", linestyle="--", alpha=0.3)
     plt.xticks(rotation=45, ha="right")
+    apply_thesis_chart_style(ax)
     plt.tight_layout()
     fig.savefig(output_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
@@ -956,29 +985,26 @@ def plot_h2_mutation_by_ccm_model(function_mutation_df: pd.DataFrame, output_pat
         return
     pivot = table.pivot(index="ccm_band", columns="model", values="mutation_score_corrected")
     pivot = pivot.reindex(columns=[m for m in MODEL_SIZE_ORDER if m in pivot.columns])
-    band_n = table.groupby("ccm_band", observed=False)[["mutants_total", "distinct_functions"]].first()
+    # band_n = table.groupby("ccm_band", observed=False)[["mutants_total", "distinct_functions"]].first()
 
-    band_n_line = "  |  ".join(
-        f"{band}: n={int(row.mutants_total)} mutantes ({int(row.distinct_functions)} funções)"
-        for band, row in band_n.iterrows() if pd.notna(row["mutants_total"])
-    )
+    # band_n_line = "  |  ".join(
+    #     f"{band}: n={int(row.mutants_total)} mutantes ({int(row.distinct_functions)} funções)"
+    #     for band, row in band_n.iterrows() if pd.notna(row["mutants_total"])
+    # )
 
     fig, ax = plt.subplots(figsize=(11, 6.8))
-    pivot.plot(kind="bar", ax=ax, color=[MODEL_PALETTE.get(m, "#888888") for m in pivot.columns])
+    pivot.plot(kind="bar", ax=ax, width=0.7, color=[MODEL_PALETTE.get(m, "#888888") for m in pivot.columns])
     ax.set_ylim(0, 105)
-    ax.set_title(
-        "H2: mutation score corrigido por faixa de CCM e modelo\n"
-        f"{band_n_line}\n"
-        "(nº de mutantes/funções por faixa é idêntico entre modelos -- mesmo código-fonte mutado)",
-        fontsize=11,
-    )
     ax.set_xlabel("Faixa de CCM")
     ax.set_ylabel("Mutation score corrigido (%)")
-    ax.legend(title="Modelo (ordem por tag de config.: e2b < 3b < 4b < 7b; empate 7b em ordem alfabética)",
-              labels=[MODEL_SIZE_LABELS.get(m, m) for m in pivot.columns], fontsize=8,
-              loc="upper left", bbox_to_anchor=(1.01, 1))
-    ax.grid(axis="y", linestyle="--", alpha=0.3)
+    ax.legend(labels=[MODEL_SIZE_LABELS.get(m, m) for m in pivot.columns])
     plt.xticks(rotation=0)
+    # Sample-size disclosure (mutants/functions per band -- identical across
+    # models, same source mutated for all) previously lived in the removed
+    # in-image title; kept as a footnote annotation instead of a title, per
+    # the thesis caption goes in the document, not the image.
+    # plt.figtext(0.01, 0.01, band_n_line, fontsize=7.5, color="#666")
+    apply_thesis_chart_style(ax)
     plt.tight_layout()
     fig.savefig(output_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
@@ -1332,17 +1358,16 @@ def plot_execution_outcomes(df: pd.DataFrame, output_path: Path) -> None:
 
     labels = [f"{row.model}\n{row.strategy}" for _, row in summary.iterrows()]
     fig, ax = plt.subplots(figsize=(11, 6))
-    ax.bar(labels, summary["verified_eligible_count"], label="Verified success (≥1 passing test)", color="#4c956c")
+    ax.bar(labels, summary["verified_eligible_count"], label="Sucesso verificado", color="#4c956c")
     ax.bar(labels, summary["fully_skipped_count"], bottom=summary["verified_eligible_count"],
-           label="Fully skipped (0 verified)", color="#f2b134")
+           label="Totalmente skip-repair", color="#f2b134")
     ax.bar(labels, other_failed,
            bottom=summary["verified_eligible_count"] + summary["fully_skipped_count"],
-           label="Failed / invalid", color="#c44e52")
-    ax.set_title("Resultado da execução por modelo e estratégia\n(sucesso verificado ≠ jest_success bruto)")
+           label="Falha / inválido", color="#c44e52")
     ax.set_ylabel("Observações (de 25 por grupo)")
-    ax.legend()
-    ax.grid(axis="y", linestyle="--", alpha=0.3)
+    ax.legend(loc="lower right")
     plt.xticks(rotation=45, ha="right")
+    apply_thesis_chart_style(ax)
     plt.tight_layout()
     fig.savefig(output_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
@@ -1357,12 +1382,11 @@ def plot_verified_success_rate(df: pd.DataFrame, output_path: Path) -> None:
 
     fig, ax = plt.subplots(figsize=(10, 6))
     pivot.plot(kind="bar", ax=ax)
-    ax.set_title("Taxa de sucesso verificado por modelo e estratégia\n(exclui observações totalmente skip-repaired)")
     ax.set_xlabel("Modelo")
     ax.set_ylabel("Sucesso verificado (%)")
-    ax.legend(title="Estratégia")
+    ax.legend()
     ax.set_ylim(0, 110)
-    ax.grid(axis="y", linestyle="--", alpha=0.3)
+    apply_thesis_chart_style(ax)
     plt.tight_layout()
     fig.savefig(output_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
@@ -1374,11 +1398,10 @@ def plot_mean_tests_by_strategy(df: pd.DataFrame, output_path: Path) -> None:
 
     fig, ax = plt.subplots(figsize=(10, 6))
     pivot.plot(kind="bar", ax=ax)
-    ax.set_title("Média de testes por função por modelo e estratégia\n(entre observações de sucesso verificado)")
     ax.set_xlabel("Modelo")
     ax.set_ylabel("Média de testes por função")
-    ax.legend(title="Estratégia")
-    ax.grid(axis="y", linestyle="--", alpha=0.3)
+    ax.legend()
+    apply_thesis_chart_style(ax)
     plt.tight_layout()
     fig.savefig(output_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
@@ -1397,13 +1420,16 @@ def plot_coverage_by_strategy(df: pd.DataFrame, output_path: Path) -> None:
         return
 
     fig, axes = plt.subplots(1, len(metrics), figsize=(6 * len(metrics), 6), squeeze=False)
-    titles = {"fn_statements_pct": "Cobertura de statements (%)", "fn_branches_pct": "Cobertura de branches (%)"}
+    # No in-image title (see apply_thesis_chart_style): the y-axis label
+    # itself names the metric per subplot instead, since with the title
+    # gone that's otherwise the only way to tell the two apart.
+    ylabels = {"fn_statements_pct": "Cobertura de statements (%)", "fn_branches_pct": "Cobertura de branches (%)"}
     for ax, metric in zip(axes[0], metrics):
         eligible.boxplot(column=metric, by="strategy", ax=ax, grid=False)
-        ax.set_title(titles.get(metric, metric))
         ax.set_xlabel("Estratégia")
-        ax.set_ylabel("%")
-    fig.suptitle("Distribuição de cobertura por estratégia (observações de sucesso verificado)")
+        ax.set_ylabel(ylabels.get(metric, metric))
+        apply_thesis_chart_style(ax)
+    fig.suptitle("")
     plt.tight_layout()
     fig.savefig(output_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
@@ -1428,11 +1454,10 @@ def plot_function_coverage_rate(df: pd.DataFrame, output_path: Path) -> None:
     pivot = rate.pivot(index="model", columns="strategy", values="full_coverage").fillna(0)
     fig, ax = plt.subplots(figsize=(10, 6))
     pivot.plot(kind="bar", ax=ax)
-    ax.set_title("Observações com cobertura de função de 100%\n(métrica quase binária nesta granularidade)")
     ax.set_ylabel("% das observações verificadas")
     ax.set_ylim(0, 110)
-    ax.legend(title="Estratégia")
-    ax.grid(axis="y", linestyle="--", alpha=0.3)
+    ax.legend()
+    apply_thesis_chart_style(ax)
     plt.tight_layout()
     fig.savefig(output_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
@@ -1467,9 +1492,8 @@ def plot_ccm_band_summary(df: pd.DataFrame, output_path: Path) -> None:
     ax1.set_xticklabels(labels)
     ax1.set_ylabel("%")
     ax1.set_ylim(0, 110)
-    ax1.set_title("Cobertura por faixa de complexidade (CCM), todos os modelos agregados\n(ver ccm_h2_coverage_by_model.png para separação por modelo -- evidência de H2)")
     ax1.legend()
-    ax1.grid(axis="y", linestyle="--", alpha=0.3)
+    apply_thesis_chart_style(ax1)
     plt.tight_layout()
     fig.savefig(output_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
@@ -1491,22 +1515,16 @@ def plot_h2_coverage_by_ccm_model(df: pd.DataFrame, output_path: Path) -> None:
     n_pivot = table.pivot(index="ccm_band", columns="model", values="verified_observations")
 
     fig, ax = plt.subplots(figsize=(11, 6.5))
-    pivot.plot(kind="bar", ax=ax, color=[MODEL_PALETTE.get(m, "#888888") for m in pivot.columns])
+    pivot.plot(kind="bar", ax=ax, width=0.7, color=[MODEL_PALETTE.get(m, "#888888") for m in pivot.columns])
     for container, model in zip(ax.containers, pivot.columns):
         labels = [f"n={int(n)}" if pd.notna(n) else "n=0" for n in n_pivot[model].reindex(pivot.index)]
         ax.bar_label(container, labels=labels, fontsize=7, rotation=90, padding=2)
-    ax.set_title(
-        "H2: cobertura de statements por faixa de CCM e modelo\n"
-        "(observações de sucesso verificado, agregadas entre estratégias; rótulo = n de observações)"
-    )
     ax.set_xlabel("Faixa de CCM")
     ax.set_ylabel("Cobertura média de statements (%)")
     ax.set_ylim(0, 112)
-    ax.legend(title="Modelo (ordem por tag de config.: e2b < 3b < 4b < 7b; empate 7b em ordem alfabética)",
-              labels=[MODEL_SIZE_LABELS.get(m, m) for m in pivot.columns], fontsize=8,
-              loc="upper left", bbox_to_anchor=(1.01, 1))
-    ax.grid(axis="y", linestyle="--", alpha=0.3)
+    ax.legend(labels=[MODEL_SIZE_LABELS.get(m, m) for m in pivot.columns])
     plt.xticks(rotation=0)
+    apply_thesis_chart_style(ax)
     plt.tight_layout()
     fig.savefig(output_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
@@ -1553,14 +1571,17 @@ def plot_h2_coverage_continuous(df: pd.DataFrame, output_path: Path) -> None:
     ax.add_artist(model_legend)
     ax.legend(handles=strategy_handles, loc="lower left", fontsize=8, title="Estratégia (forma do marcador)")
 
-    ax.set_title(
-        "H2: CCM (contínuo) x cobertura de statements, por modelo\n"
-        f"n={len(verified)} observações verificadas de 25 funções -- exploratório, sem teste de significância"
-    )
     ax.set_xlabel("CCM (complexidade ciclomática)")
     ax.set_ylabel("Cobertura de statements (%)")
     ax.set_ylim(-5, 112)
-    ax.grid(alpha=0.3)
+    # Sample-size / exploratory-only caveat previously lived in the removed
+    # in-image title; kept as a footnote, not a title.
+    plt.figtext(
+        0.01, 0.01,
+        f"n={len(verified)} observações verificadas de 25 funções -- exploratório, sem teste de significância.",
+        fontsize=7.5, color="#666",
+    )
+    apply_thesis_chart_style(ax)
     plt.tight_layout()
     fig.savefig(output_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
@@ -1578,18 +1599,19 @@ def plot_failure_modes(df: pd.DataFrame, output_path: Path) -> None:
     top = top.copy()
     top["group"] = top["model"] + "\n" + top["strategy"]
     top["mode"] = top["phase"] + "/" + top["error_subcategory"]
-    pivot = top.pivot_table(index="group", columns="mode", values="event_count", aggfunc="sum").fillna(0)
+    pivot = top.pivot_table(index="group", columns="mode", values="event_count", aggfunc="sum").fillna(0) #TODO: remove the word group from final image
 
     fig, ax = plt.subplots(figsize=(12, 7))
     pivot.plot(kind="bar", stacked=True, ax=ax, colormap="tab20")
-    ax.set_title(
-        "Perfil de modos de falha por modelo e estratégia (diagnóstico)\n"
-        "Top 3 por grupo -- população: eventos de erro, NÃO funções. Não é um ranking de desempenho."
-    )
-    ax.set_ylabel("Eventos de erro")
-    ax.legend(title="fase/subcategoria", bbox_to_anchor=(1.02, 1), loc="upper left", fontsize=8)
-    ax.grid(axis="y", linestyle="--", alpha=0.3)
+    ax.set_ylabel("Eventos de erro (top 3 por grupo)")
+    ax.legend(title="fase/subcategoria")
     plt.xticks(rotation=45, ha="right")
+    # plt.figtext(
+    #     0.01, 0.01,
+    #     "Top 3 por grupo -- população: eventos de erro, NÃO funções. Diagnóstico apenas, não um ranking de desempenho.",
+    #     fontsize=7.5, color="#666",
+    # )
+    apply_thesis_chart_style(ax)
     plt.tight_layout()
     fig.savefig(output_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
@@ -1601,18 +1623,18 @@ def export_figures(df: pd.DataFrame) -> dict[str, Path]:
     outputs["execution_outcomes"] = FIGURES_DIR / "execution_outcomes.png"
     outputs["verified_success_rate"] = FIGURES_DIR / "verified_success_rate.png"
     outputs["mean_tests_by_strategy"] = FIGURES_DIR / "mean_tests_by_strategy.png"
-    outputs["coverage_by_strategy"] = FIGURES_DIR / "coverage_by_strategy.png"
+    # outputs["coverage_by_strategy"] = FIGURES_DIR / "coverage_by_strategy.png"
     outputs["function_coverage_rate"] = FIGURES_DIR / "function_coverage_rate.png"
     outputs["h2_coverage_by_ccm_model"] = FIGURES_DIR / "h2_coverage_by_ccm_model.png"
-    outputs["h2_coverage_continuous"] = FIGURES_DIR / "h2_coverage_continuous.png"
+    # outputs["h2_coverage_continuous"] = FIGURES_DIR / "h2_coverage_continuous.png"
 
     plot_execution_outcomes(df, outputs["execution_outcomes"])
     plot_verified_success_rate(df, outputs["verified_success_rate"])
     plot_mean_tests_by_strategy(df, outputs["mean_tests_by_strategy"])
-    plot_coverage_by_strategy(df, outputs["coverage_by_strategy"])
+    # plot_coverage_by_strategy(df, outputs["coverage_by_strategy"])
     plot_function_coverage_rate(df, outputs["function_coverage_rate"])
     plot_h2_coverage_by_ccm_model(df, outputs["h2_coverage_by_ccm_model"])
-    plot_h2_coverage_continuous(df, outputs["h2_coverage_continuous"])
+    # plot_h2_coverage_continuous(df, outputs["h2_coverage_continuous"])
 
     return outputs
 

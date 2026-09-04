@@ -249,7 +249,7 @@ def section_complexity(df: pd.DataFrame, smell: pd.DataFrame, function_mutation:
         "à função-alvo que o contém (location), não ao módulo inteiro -- ver CLAUDE.md. "
         "mutation_score_corrected é ponderado por mutante (soma antes de dividir), nunca a média "
         "não ponderada das taxas por função. distinct_functions é o tamanho amostral da célula: "
-        "11-20 e >20 têm poucas funções distintas (5 e 3 de 25)."
+        "10-19 e ≥20 têm poucas funções distintas (5 e 3 de 25)."
     )
     h2_mutation = ea.build_h2_mutation_by_ccm_model(function_mutation) if not function_mutation.empty else pd.DataFrame()
     if not h2_mutation.empty:
