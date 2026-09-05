@@ -700,9 +700,9 @@ def plot_smell_rates(df: pd.DataFrame, output_path: Path) -> None:
     ax.set_ylabel("Taxa (%) entre testes ativos")
     ax.set_ylim(0, max(100, float(use_df["assertion_roulette_rate"].max()) + 12))
     ax.legend()
-    for i, excluded in enumerate(use_df["unmeasurable_functions"]):
-        if excluded:
-            ax.annotate(f"{excluded} excl.", (i, 2), ha="center", fontsize=7, color="#666", rotation=90)
+    # for i, excluded in enumerate(use_df["unmeasurable_functions"]):
+    #     if excluded:
+    #         ax.annotate(f"{excluded} excl.", (i, 2), ha="center", fontsize=7, rotation=90)
     # plt.figtext(
     #     0.01, 0.01,
     #     "\"N excl.\" = observações totalmente skip-repaired (não mensuráveis), excluídas do "
@@ -954,9 +954,9 @@ def plot_mutation_score(df: pd.DataFrame, output_path: Path) -> None:
     summary = build_mutation_summary_by_model_strategy(df)
     fig, ax = plt.subplots(figsize=(10, 6))
     labels = [f"{row.model}\n{row.strategy}" for _, row in summary.iterrows()]
-    ax.bar(labels, summary["mutation_score_corrected"], color="#c44e52", label="Mutation score (corrected)")
+    ax.bar(labels, summary["mutation_score_corrected"], color="#c44e52", label="Mutation score corrigido (%)")
     ax.plot(labels, summary["no_coverage_share"], color="#333333", marker="o", linewidth=1.5,
-            label="No-coverage share (%)")
+            label="Proporção de mutantes sem cobertura (%)")
     ax.set_ylabel("%")
     ax.set_ylim(0, 110)
     ax.legend()
