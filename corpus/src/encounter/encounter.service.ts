@@ -28,6 +28,13 @@ export class EncounterService {
   ) {}
 
   async createEncounter(dto: CreateEncounterDto): Promise<Encounter> {
+    if (dto.adtType !== AdtType.A01) {
+      throw new BadRequestException(
+        'Only ADT A01 can create an encounter; use the ADT workflow for A02, A03 and A08',
+      );
+    }
+
+    this.validateEncounterFields(dto);
     const patient = await this.patientService.getPatientById(dto.patientId);
 
     if (!patient.active) {
@@ -200,8 +207,13 @@ export class EncounterService {
         );
       }
 
-      let patient = await this.patientService.findByCpfOrFail(dto.cpf);
-      if (!patient) {
+      let patient: Patient;
+      try {
+        patient = await this.patientService.findByCpfOrFail(dto.cpf);
+      } catch (error) {
+        if (!(error instanceof NotFoundException)) {
+          throw error;
+        }
         patient = await this.patientService.createPatient({
           cpf: dto.cpf,
           name: dto.name,
@@ -393,8 +405,8 @@ export class EncounterService {
         }
 
         const value = Number(result.value);
-        const refMin = result.referenceMin ? Number(result.referenceMin) : null;
-        const refMax = result.referenceMax ? Number(result.referenceMax) : null;
+        const refMin = result.referenceMin !== null ? Number(result.referenceMin) : null;
+        const refMax = result.referenceMax !== null ? Number(result.referenceMax) : null;
 
         const isAbnormal =
           (refMin !== null && value < refMin) ||

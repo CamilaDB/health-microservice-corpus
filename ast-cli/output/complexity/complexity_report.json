@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-06-03T01:34:28.928Z",
+  "generated_at": "2026-08-29T20:59:54.374Z",
   "total": 25,
   "high": 7,
-  "medium": 5,
-  "low": 13,
+  "medium": 6,
+  "low": 12,
   "functions": [
     {
       "name": "updateResult",
@@ -18,7 +18,7 @@
       "class_name": "EncounterService",
       "module": "encounter",
       "layer": "service",
-      "ccm": 20,
+      "ccm": 21,
       "range": "high"
     },
     {
@@ -50,7 +50,7 @@
       "class_name": "OrderService",
       "module": "order",
       "layer": "service",
-      "ccm": 13,
+      "ccm": 15,
       "range": "high"
     },
     {
@@ -86,6 +86,14 @@
       "range": "medium"
     },
     {
+      "name": "createEncounter",
+      "class_name": "EncounterService",
+      "module": "encounter",
+      "layer": "service",
+      "ccm": 5,
+      "range": "medium"
+    },
+    {
       "name": "createOrder",
       "class_name": "OrderService",
       "module": "order",
@@ -100,14 +108,6 @@
       "layer": "service",
       "ccm": 5,
       "range": "medium"
-    },
-    {
-      "name": "createEncounter",
-      "class_name": "EncounterService",
-      "module": "encounter",
-      "layer": "service",
-      "ccm": 4,
-      "range": "low"
     },
     {
       "name": "createPatient",

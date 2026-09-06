@@ -1,15 +1,27 @@
-Generate Jest tests for the target function.
+<TASK>
+Generate Jest unit tests for the target function.
+</TASK>
 
-Function:
+<FUNCTION_NAME>
+{{FUNCTION_NAME}}
+</FUNCTION_NAME>
+
+<METHOD_SOURCE>
 {{METHOD_SOURCE}}
+</METHOD_SOURCE>
 
-Current spec file:
-{{EXISTING_SPEC_FILE}}
-
-Available mocks:
+<AVAILABLE_MOCKS>
 {{AVAILABLE_MOCKS}}
+</AVAILABLE_MOCKS>
 
-Context:
+<RELATED_DTOS>
 {{RELATED_DTOS}}
+</RELATED_DTOS>
 
+<RELATED_ENUMS>
 {{RELATED_ENUMS}}
+</RELATED_ENUMS>
+
+<CURRENT_SPEC_FILE>
+{{EXISTING_SPEC_FILE}}
+</CURRENT_SPEC_FILE>

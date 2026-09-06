@@ -1,0 +1,5 @@
+ccm_band,functions,mean_total_tests,mean_function_coverage,mean_statement_coverage,mean_branch_coverage
+1-4,12,2.05,99.38,97.13,53.85
+5-9,5,4.38,100.0,85.12,75.37
+10-19,5,6.88,81.73,67.55,60.69
+≥20,3,8.27,96.67,70.56,66.74

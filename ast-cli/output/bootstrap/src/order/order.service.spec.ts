@@ -1,6 +1,7 @@
 // AUTO-GENERATED-BOOTSTRAP-START
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import { SortDirection } from '../common/enums/sort-direction.enum';
 import { EncounterStatus } from '../encounter/enums/encounter-status.enum';
 import { ResultStatus } from '../result/enums/result-status.enum';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -9,6 +10,7 @@ import { SearchOrdersDto } from './dto/search-orders.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { Order } from './entities/order.entity';
 import { ExamType } from './enums/exam-type.enum';
+import { OrderSortField } from './enums/order-sort-field.enum';
 import { OrderStatus } from './enums/order-status.enum';
 import { PaginatedOrders } from './interfaces/order.interface';
 import { OrderRepository } from './order.repository';

@@ -1,0 +1,16 @@
+model,strategy,total_events,functions_observed,distinct_attempts_logged,events_per_function,events_per_attempt
+falcon_7b,few_shot,155,19,133,8.16,1.17
+falcon_7b,structured,132,15,58,8.8,2.28
+falcon_7b,zero_shot,102,14,71,7.29,1.44
+gemma_4,few_shot,28,8,12,3.5,2.33
+gemma_4,structured,69,13,31,5.31,2.23
+gemma_4,zero_shot,83,14,27,5.93,3.07
+qwen_4b,few_shot,57,11,28,5.18,2.04
+qwen_4b,structured,82,9,39,9.11,2.1
+qwen_4b,zero_shot,121,11,38,11.0,3.18
+qwen_coder_3b,few_shot,56,14,18,4.0,3.11
+qwen_coder_3b,structured,62,17,40,3.65,1.55
+qwen_coder_3b,zero_shot,114,20,74,5.7,1.54
+qwen_coder_7b,few_shot,33,12,18,2.75,1.83
+qwen_coder_7b,structured,46,11,24,4.18,1.92
+qwen_coder_7b,zero_shot,54,13,28,4.15,1.93

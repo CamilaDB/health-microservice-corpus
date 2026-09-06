@@ -1,131 +1,138 @@
 <TASK>
-Generate Jest unit tests following the same testing strategy used in the examples.
+Generate Jest unit tests following the same testing strategy used in the examples below.
 </TASK>
 
-<EXAMPLE>
+<EXAMPLE_1>
 
 <INPUT>
-
 <METHOD_SOURCE>
 async create(dto: CreateUserDto) {
-const existing = await repository.findOne({
-email: dto.email,
-});
+  const existing = await this.userRepository.findOne({
+    email: dto.email,
+  });
 
-if (existing) {
-throw new ConflictException();
-}
+  if (existing) {
+    throw new ConflictException();
+  }
 
-const entity = repository.create(dto);
+  const entity = this.userRepository.create(dto);
 
-return repository.save(entity);
+  return this.userRepository.save(entity);
 }
 </METHOD_SOURCE>
-
 </INPUT>
 
 <OUTPUT>
-
-<TEST_OUTPUT>
 describe('create', () => {
-it('should throw ConflictException when user already exists', async () => {
-repositoryMock.findOne.mockResolvedValueOnce({
-id: '1',
-email: '[test@test.com](mailto:test@test.com)',
+  it('should throw ConflictException when user already exists', async () => {
+    userRepositoryMock.findOne.mockResolvedValueOnce({
+      id: '1',
+      email: 'test@test.com',
+    });
+
+    await expect(
+      service.create({ email: 'test@test.com' } as CreateUserDto),
+    ).rejects.toThrow(ConflictException);
+
+    expect(userRepositoryMock.create).not.toHaveBeenCalled();
+    expect(userRepositoryMock.save).not.toHaveBeenCalled();
+  });
+
+  it('should save and return the created entity', async () => {
+    userRepositoryMock.findOne.mockResolvedValueOnce(null);
+
+    const createdEntity = { email: 'test@test.com' };
+    userRepositoryMock.create.mockReturnValueOnce(createdEntity);
+    userRepositoryMock.save.mockResolvedValueOnce({ id: '1', ...createdEntity });
+
+    await service.create({ email: 'test@test.com' } as CreateUserDto);
+
+    expect(userRepositoryMock.create).toHaveBeenCalledWith({ email: 'test@test.com' });
+    expect(userRepositoryMock.save).toHaveBeenCalledWith(createdEntity);
+  });
 });
-
-```
-await expect(
-  service.create({
-    email: 'test@test.com',
-  } as CreateUserDto),
-).rejects.toThrow(ConflictException);
-
-expect(repositoryMock.create).not.toHaveBeenCalled();
-expect(repositoryMock.save).not.toHaveBeenCalled();
-```
-
-});
-
-it('should save created entity', async () => {
-repositoryMock.findOne.mockResolvedValueOnce(null);
-
-```
-const createdEntity = {
-  email: 'test@test.com',
-};
-
-repositoryMock.create.mockReturnValueOnce(createdEntity);
-
-repositoryMock.save.mockResolvedValueOnce({
-  id: '1',
-  ...createdEntity,
-});
-
-await service.create({
-  email: 'test@test.com',
-} as CreateUserDto);
-
-expect(repositoryMock.create).toHaveBeenCalledWith({
-  email: 'test@test.com',
-});
-
-expect(repositoryMock.save).toHaveBeenCalledWith(createdEntity);
-```
-
-});
-});
-</TEST_OUTPUT>
-
 </OUTPUT>
 
-</EXAMPLE>
+</EXAMPLE_1>
 
-<EXAMPLE>
+<EXAMPLE_2>
 
 <INPUT>
-
 <METHOD_SOURCE>
 async validate(id: string) {
-const user = await repository.findById(id);
+  const user = await this.userRepository.findById(id);
 
-if (!user) {
-throw new NotFoundException();
-}
+  if (!user) {
+    throw new NotFoundException();
+  }
 
-if (!user.active) {
-throw new BadRequestException();
-}
+  if (!user.active) {
+    throw new BadRequestException();
+  }
 
-return user;
+  return user;
 }
 </METHOD_SOURCE>
-
 </INPUT>
 
 <OUTPUT>
-
-<TEST_OUTPUT>
 describe('validate', () => {
-it('should throw BadRequestException when user is inactive', async () => {
-repositoryMock.findById.mockResolvedValueOnce({
-id: '1',
-active: false,
-});
+  it('should throw NotFoundException when user does not exist', async () => {
+    userRepositoryMock.findById.mockResolvedValueOnce(null);
 
-```
-await expect(
-  service.validate('1'),
-).rejects.toThrow(BadRequestException);
-```
+    await expect(service.validate('1')).rejects.toThrow(NotFoundException);
+  });
 
-});
-});
-</TEST_OUTPUT>
+  it('should throw BadRequestException when user is inactive', async () => {
+    userRepositoryMock.findById.mockResolvedValueOnce({ id: '1', active: false });
 
+    await expect(service.validate('1')).rejects.toThrow(BadRequestException);
+  });
+
+  it('should return the user when active', async () => {
+    const user = { id: '1', active: true };
+    userRepositoryMock.findById.mockResolvedValueOnce(user);
+
+    const result = await service.validate('1');
+
+    expect(result).toBe(user);
+  });
+});
 </OUTPUT>
 
-</EXAMPLE>
+</EXAMPLE_2>
+
+<EXAMPLE_3>
+
+<INPUT>
+<METHOD_SOURCE>
+getRole(user: User): UserRole {
+  if (!user.roles || user.roles.length === 0) {
+    throw new BadRequestException('No roles assigned');
+  }
+
+  return user.roles[0];
+}
+</METHOD_SOURCE>
+</INPUT>
+
+<OUTPUT>
+describe('getRole', () => {
+  it('should throw BadRequestException when user has no roles', () => {
+    expect(() =>
+      service.getRole({ roles: [] } as User),
+    ).toThrow(BadRequestException);
+  });
+
+  it('should return the first role when roles are present', () => {
+    const result = service.getRole({ roles: [UserRole.ADMIN] } as User);
+
+    expect(result).toBe(UserRole.ADMIN);
+  });
+});
+</OUTPUT>
+
+</EXAMPLE_3>
 
 <TARGET>
 
@@ -133,29 +140,21 @@ await expect(
 {{FUNCTION_NAME}}
 </FUNCTION_NAME>
 
-<METHOD_SIGNATURE>
-{{METHOD_SIGNATURE}}
-</METHOD_SIGNATURE>
-
 <METHOD_SOURCE>
 {{METHOD_SOURCE}}
 </METHOD_SOURCE>
 
-<DEPENDENCIES>
-{{CONSTRUCTOR_DEPENDENCIES}}
-</DEPENDENCIES>
-
-<BRANCHES>
-{{BRANCHES}}
-</BRANCHES>
-
-<DEPENDENCY_USAGES>
-{{DEPENDENCY_USAGES}}
-</DEPENDENCY_USAGES>
+<AVAILABLE_MOCKS>
+{{AVAILABLE_MOCKS}}
+</AVAILABLE_MOCKS>
 
 <RELATED_DTOS>
 {{RELATED_DTOS}}
 </RELATED_DTOS>
+
+<RELATED_ENUMS>
+{{RELATED_ENUMS}}
+</RELATED_ENUMS>
 
 <CURRENT_SPEC_FILE>
 {{EXISTING_SPEC_FILE}}
@@ -164,9 +163,7 @@ await expect(
 </TARGET>
 
 <OUTPUT_FORMAT>
-<TEST_OUTPUT>
 describe('{{FUNCTION_NAME}}', () => {
-it(...)
+  it(...)
 })
-</TEST_OUTPUT>
 </OUTPUT_FORMAT>

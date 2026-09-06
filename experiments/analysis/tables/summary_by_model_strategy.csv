@@ -1,0 +1,16 @@
+model,strategy,observations_attempted,raw_jest_success_rate,fully_skipped_count,verified_eligible_count,verified_success_rate,functions_evaluated,generation_success_rate,mean_total_tests,median_total_tests,mean_passed_tests,mean_failed_tests,mean_function_coverage,median_function_coverage,mean_statement_coverage,mean_branch_coverage
+falcon_7b,few_shot,25,32.0,0,8,32.0,8,84.0,2.75,2.0,2.62,0.0,93.75,100.0,89.35,59.02
+falcon_7b,structured,25,100.0,6,19,76.0,19,100.0,3.42,3.0,2.05,0.0,88.6,100.0,68.39,40.48
+falcon_7b,zero_shot,25,76.0,0,19,76.0,19,100.0,3.11,2.0,2.47,0.0,97.37,100.0,87.5,67.06
+gemma_4,few_shot,25,92.0,1,22,88.0,22,92.0,3.91,2.0,3.68,0.0,100.0,100.0,95.82,69.3
+gemma_4,structured,25,96.0,1,23,92.0,23,100.0,4.65,3.0,4.3,0.0,100.0,100.0,97.0,70.39
+gemma_4,zero_shot,25,96.0,7,17,68.0,17,96.0,3.53,2.0,2.24,0.0,94.12,100.0,84.91,55.79
+qwen_4b,few_shot,25,96.0,1,23,92.0,23,100.0,4.17,3.0,3.96,0.0,100.0,100.0,95.13,68.81
+qwen_4b,structured,25,84.0,1,20,80.0,20,96.0,4.45,3.0,4.2,0.0,100.0,100.0,90.67,58.87
+qwen_4b,zero_shot,25,96.0,2,22,88.0,22,100.0,5.36,4.0,4.73,0.0,90.91,100.0,84.27,59.98
+qwen_coder_3b,few_shot,25,92.0,3,20,80.0,20,92.0,3.85,2.0,2.55,0.0,94.17,100.0,82.17,56.84
+qwen_coder_3b,structured,25,92.0,1,22,88.0,22,100.0,4.14,3.0,2.91,0.0,96.97,100.0,78.25,48.47
+qwen_coder_3b,zero_shot,25,76.0,7,12,48.0,12,96.0,2.92,3.0,2.17,0.0,100.0,100.0,93.13,62.55
+qwen_coder_7b,few_shot,25,100.0,0,25,100.0,25,100.0,3.76,2.0,3.08,0.0,95.33,100.0,86.7,59.68
+qwen_coder_7b,structured,25,96.0,1,23,92.0,23,100.0,4.0,3.0,3.3,0.0,94.93,100.0,87.69,62.66
+qwen_coder_7b,zero_shot,25,96.0,1,23,92.0,23,100.0,3.83,2.0,2.87,0.0,94.93,100.0,85.05,61.8

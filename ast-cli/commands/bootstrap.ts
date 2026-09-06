@@ -1,21 +1,3 @@
-/**
- * bootstrap.ts
- *
- * Reads output/service_functions.json, groups functions by test_output_file,
- * and generates one Jest spec bootstrap per service file.
- *
- * What comes from the JSON (no extra AST needed):
- *   - class_name, source_file, test_output_file
- *   - relevantDtos, relevantEnums (union across all functions in the file)
- *   - constructorDependencies (for cross-checking / display)
- *
- * What still requires AST (once per service file):
- *   - @InjectRepository detection → getRepositoryToken(Entity)
- *   - Public methods of each dep class → mock shape
- *
- * Output: one .spec.ts file per test_output_file entry.
- */
-
 import * as fs from "fs";
 import * as path from "path";
 
@@ -27,10 +9,6 @@ import {
   RelevantImport,
 } from "../core/extractor/types";
 import { BOOTSTRAP_PATH, CORPUS_ROOT, FUNCTIONS_PATH } from "../core/config";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Types mirroring service_functions.json shape
-// ─────────────────────────────────────────────────────────────────────────────
 
 interface StoredFunction {
   name: string;
@@ -50,10 +28,6 @@ interface FunctionsFile {
   functions: StoredFunction[];
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Load JSON
-// ─────────────────────────────────────────────────────────────────────────────
-
 const functionsPath = path.resolve(process.cwd(), FUNCTIONS_PATH);
 
 if (!fs.existsSync(functionsPath)) {
@@ -66,11 +40,6 @@ if (!fs.existsSync(functionsPath)) {
 const { functions }: FunctionsFile = JSON.parse(
   fs.readFileSync(functionsPath, "utf-8"),
 );
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Group by test_output_file
-// Each group becomes one spec file.
-// ─────────────────────────────────────────────────────────────────────────────
 
 const groups = new Map<
   string,
@@ -94,18 +63,9 @@ for (const fn of functions) {
   groups.get(fn.test_output_file)!.fns.push(fn);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// AST project — shared across all groups (single parse)
-// ─────────────────────────────────────────────────────────────────────────────
-
 const project = createProject();
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Per-group generation
-// ─────────────────────────────────────────────────────────────────────────────
-
 for (const group of groups.values()) {
-  // source_file is relative to CORPUS_ROOT (e.g. "src/patient/patient.service.ts")
   const absSourceFile = path.join(CORPUS_ROOT, group.sourceFile);
 
   let sf = project.getSourceFile(absSourceFile);
@@ -140,11 +100,6 @@ for (const group of groups.values()) {
     `[bootstrap] ${group.testOutputFile} (${group.fns.length} functions, ${deps.length} deps)`,
   );
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Merge DTOs and enums across all functions in a group
-// De-duplicated by name — first occurrence wins.
-// ─────────────────────────────────────────────────────────────────────────────
 
 function mergeTypesFromFunctions(fns: StoredFunction[]): {
   dtos: ExtractedDto[];
@@ -185,15 +140,6 @@ function mergeTypesFromFunctions(fns: StoredFunction[]): {
   };
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Code generation
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Builds the relative import path from the spec file to the service file.
- * e.g. spec="src/patient/patient.service.spec.ts", service="src/patient/patient.service.ts"
- * → "./patient.service"
- */
 function relativeImport(fromSpec: string, toService: string): string {
   const rel = path.relative(
     path.dirname(fromSpec),
@@ -212,9 +158,7 @@ function addImport(
 
   const existing = symbolToImport.get(symbol);
 
-  // já existe um import para esse símbolo
   if (existing) {
-    // prefere caminhos relativos ao invés de src/*
     const existingIsSrc = existing.importPath.startsWith("src/");
     const newIsSrc = importPath.startsWith("src/");
 
@@ -245,41 +189,14 @@ function generateImports(
 ): string {
   const lines: string[] = [];
 
-  // Framework
   lines.push(`import { Test, TestingModule } from '@nestjs/testing';`);
 
-  //   const hasRepo = deps.some((d) => d.isRepository);
-  //   if (hasRepo) {
-  //     lines.push(`import { getRepositoryToken } from '@nestjs/typeorm';`);
-  //     lines.push(`import { Repository } from 'typeorm';`);
-  //   }
-
-  //   // Entity imports (one per @InjectRepository dep)
-  //   deps
-  //     .filter((d) => d.isRepository && d.entityName && d.entityImportPath)
-  //     .forEach((d) => {
-  //       lines.push(`import { ${d.entityName} } from '${d.entityImportPath}';`);
-  //     });
-
-  // Non-repository deps
-  //   deps
-  //     .filter((d) => !d.isRepository)
-  //     .sort((a, b) => a.typeName.localeCompare(b.typeName))
-  //     .forEach((d) => {
-  //       lines.push(`import { ${d.typeName} } from '${d.importPath}';`);
-  //     });
-
-  // DTOs and enums — grouped by importPath and emitted as real import statements.
-  // importPath is the module specifier as it appears in the service file's own
-  // imports (e.g. "./dto/create-patient.dto", "../enums/order-status.enum").
   const symbolToImport = new Map<
     string,
     { symbol: string; importPath: string }
   >();
 
   for (const dep of deps) {
-    // if (dep.isRepository) continue;
-
     addImport(symbolToImport, dep.importPath, dep.typeName);
   }
 
@@ -313,7 +230,6 @@ function generateImports(
     byImportPath.get(importPath)!.add(symbol);
   }
 
-  // External (@nestjs/…, typeorm, …) first, then local — both alphabetically sorted.
   const externalPaths = [...byImportPath.keys()]
     .filter((p) => p.startsWith("@"))
     .sort();
@@ -328,7 +244,6 @@ function generateImports(
     lines.push(`import { ${symbols.join(", ")} } from '${p}';`);
   }
 
-  // The service under test — always last
   lines.push(
     `import { ${className} } from '${relativeImport(specFile, sourceFile)}';`,
   );
@@ -434,18 +349,6 @@ function generateSpec(
   const lets = generateLetBlock(className, deps);
   const mockInit = generateMockInit(deps);
   const providers = generateProviders(className, deps);
-
-  // Inline enum reference block — gives LLMs and developers a quick reference
-  // for valid enum values without having to open the source.
-  //   const enumRef =
-  //     enums.length > 0
-  //       ? [
-  //           `  /**`,
-  //           `   * Enum reference (auto-generated — do not edit):`,
-  //           ...enums.map((e) => `   * ${e.name}: ${e.values.join(" | ")}`),
-  //           `   */`,
-  //         ].join("\n") + "\n\n"
-  //       : "";
 
   return `// AUTO-GENERATED-BOOTSTRAP-START
 ${imports}

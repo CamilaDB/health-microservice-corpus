@@ -1,5 +1,5 @@
 <TASK>
-Fix the ERROR of the BROKEN TEST based on SOURCE_FUNCTION and given CONTEXT
+Fix the ERROR of the BROKEN_TEST based on SOURCE_FUNCTION and the given CONTEXT.
 </TASK>
 
 <ERROR>

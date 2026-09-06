@@ -1,0 +1,19 @@
+# Mutation summary (corrected, coverage-inclusive, mutant-weighted)
+
+| model | strategy | modules | mutants_total | mutants_killed | mutants_survived | mutants_timeout | mutants_no_coverage | mutants_compile_error | no_coverage_share | mutation_score_corrected | mutation_score_stryker_unweighted_mean |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| falcon_7b | few_shot | 4 | 769 | 127 | 45 | 0 | 597 | 0 | 77.63 | 16.51 | 79.76 |
+| falcon_7b | structured | 4 | 769 | 157 | 108 | 0 | 504 | 0 | 65.54 | 20.42 | 64.02 |
+| falcon_7b | zero_shot | 4 | 769 | 217 | 159 | 0 | 393 | 0 | 51.11 | 28.22 | 58.18 |
+| gemma_4 | few_shot | 4 | 769 | 383 | 171 | 0 | 215 | 0 | 27.96 | 49.8 | 71.04 |
+| gemma_4 | structured | 4 | 769 | 508 | 123 | 0 | 138 | 0 | 17.95 | 66.06 | 79.29 |
+| gemma_4 | zero_shot | 4 | 769 | 198 | 76 | 0 | 495 | 0 | 64.37 | 25.75 | 73.86 |
+| qwen_4b | few_shot | 4 | 769 | 412 | 171 | 0 | 186 | 0 | 24.19 | 53.58 | 73.03 |
+| qwen_4b | structured | 4 | 769 | 318 | 208 | 0 | 243 | 0 | 31.6 | 41.35 | 57.46 |
+| qwen_4b | zero_shot | 4 | 769 | 258 | 146 | 0 | 365 | 0 | 47.46 | 33.55 | 60.6 |
+| qwen_coder_3b | few_shot | 4 | 769 | 227 | 159 | 0 | 383 | 0 | 49.8 | 29.52 | 60.69 |
+| qwen_coder_3b | structured | 4 | 769 | 307 | 211 | 0 | 251 | 0 | 32.64 | 39.92 | 63.84 |
+| qwen_coder_3b | zero_shot | 4 | 769 | 80 | 76 | 0 | 613 | 0 | 79.71 | 10.4 | 65.29 |
+| qwen_coder_7b | few_shot | 4 | 769 | 336 | 262 | 0 | 171 | 0 | 22.24 | 43.69 | 57.36 |
+| qwen_coder_7b | structured | 4 | 769 | 304 | 129 | 0 | 335 | 0 | 43.56 | 39.58 | 74.46 |
+| qwen_coder_7b | zero_shot | 4 | 769 | 299 | 193 | 0 | 277 | 0 | 36.02 | 38.88 | 67.02 |

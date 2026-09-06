@@ -180,7 +180,11 @@ export function extractFunctionContext(
 
   return {
     functionName: method.getName(),
-    isAsync: method.isAsync(),
+    // A method may return a Promise without using the `async` keyword.
+    // Downstream prompts use this field to choose Jest assertion syntax, so
+    // classify its observable asynchronous behaviour rather than syntax alone.
+    isAsync:
+      method.isAsync() || method.getReturnType().getText().includes("Promise<"),
     methodSignature: methodSignatureText(method),
     methodSource: cleanMethodSource(method),
     ...(jsDoc ? { jsDoc } : {}),

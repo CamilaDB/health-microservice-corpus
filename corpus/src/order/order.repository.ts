@@ -44,6 +44,12 @@ export class OrderRepository {
       });
     }
 
+    if (dto.encounterId) {
+      qb.andWhere('order.encounterId = :encounterId', {
+        encounterId: dto.encounterId,
+      });
+    }
+
     return qb.getMany();
   }
 

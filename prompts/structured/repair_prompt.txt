@@ -1,29 +1,45 @@
-Task:
-Fix the failing Jest test.
+<TASK>
+Fix the BROKEN_TEST so it correctly tests the intended branch of SOURCE_FUNCTION.
+</TASK>
 
-Error:
+<ERROR>
+The exact failure message from Jest or the TypeScript compiler.
 {{ERROR}}
+</ERROR>
 
-Broken test:
+<BROKEN_TEST>
+The failing test block that must be repaired.
 {{BROKEN_TEST}}
+</BROKEN_TEST>
 
-Source function:
+<SOURCE_FUNCTION>
+The source code of the function under test.
 {{SOURCE_FUNCTION}}
+</SOURCE_FUNCTION>
 
-Context:
+<RELATED_DTOS>
+DTO shapes used as inputs or outputs.
 {{RELATED_DTOS}}
+</RELATED_DTOS>
 
+<RELATED_ENUMS>
+Enum values available for use in the test.
 {{RELATED_ENUMS}}
+</RELATED_ENUMS>
 
-Requirements:
-- Modify only what is necessary.
-- Preserve existing assertions whenever possible.
-- Do not add explanations.
-- Do not use markdown.
-- Do not add imports.
-- Do not add describe blocks.
+<CONSTRAINTS>
+* Modify ONLY what is necessary to fix the error
+* Preserve existing assertions whenever possible
+* Do NOT add imports
+* Do NOT add describe blocks
+* Do NOT add comments or explanations
+* Do NOT use markdown
+</CONSTRAINTS>
 
-Output:
-- Complete replacement for BROKEN_TEST.
-- Must start with it(
-- Must end with });
+<OUTPUT_SCHEMA>
+Return ONLY the complete repaired test block matching this exact structure:
+
+it('<original description>', [async] () => {
+  // ... repaired body
+});
+</OUTPUT_SCHEMA>

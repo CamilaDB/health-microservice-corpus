@@ -4,6 +4,7 @@ export class CreatePatients1775000151717 implements MigrationInterface {
   name = 'CreatePatients1775000151717';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
     await queryRunner.query(
       `CREATE TYPE "public"."patients_sex_enum" AS ENUM('M', 'F', 'U')`,
     );

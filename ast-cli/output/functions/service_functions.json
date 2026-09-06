@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-03T15:39:43.456Z",
+  "generated_at": "2026-08-29T22:05:07.835Z",
   "total": 25,
   "functions": [
     {
@@ -10,9 +10,9 @@
       "source_file": "src/encounter/encounter.service.ts",
       "test_output_file": "src/encounter/encounter.service.spec.ts",
       "line": 30,
-      "end_line": 56,
-      "loc": 27,
-      "source_hash": "cefaed57",
+      "end_line": 63,
+      "loc": 34,
+      "source_hash": "04a941d1",
       "is_async": true,
       "visibility": "public",
       "parameters": [
@@ -22,13 +22,13 @@
         }
       ],
       "return_type": "Promise<Encounter>",
-      "ccm": 4,
-      "range": "low",
+      "ccm": 5,
+      "range": "medium",
       "context": {
         "functionName": "createEncounter",
         "isAsync": true,
         "methodSignature": "createEncounter(dto: CreateEncounterDto): Promise<Encounter>",
-        "methodSource": "async createEncounter(dto: CreateEncounterDto): Promise<Encounter> {\r\n    const patient = await this.patientService.getPatientById(dto.patientId);\r\n    if (!patient.active) {\r\n      throw new BadRequestException('Cannot admit an inactive patient');\r\n    }\r\n    const active = await this.encounterRepository.findActiveByPatient(\r\n      dto.patientId,\r\n    );\r\n    if (active) {\r\n      throw new ConflictException(\r\n        `Patient already has an active encounter (id: ${active.id})`,\r\n      );\r\n    }\r\n    const encounter = this.encounterRepository.create({\r\n      ...dto,\r\n      admitDate: new Date(dto.admitDate),\r\n      status: EncounterStatus.ADMITTED,\r\n      ward: dto.ward ?? null,\r\n      transferDate: null,\r\n      dischargeDate: null,\r\n    });\r\n    return this.encounterRepository.save(encounter);\r\n  }",
+        "methodSource": "async createEncounter(dto: CreateEncounterDto): Promise<Encounter> {\n    if (dto.adtType !== AdtType.A01) {\n      throw new BadRequestException(\n        'Only ADT A01 can create an encounter; use the ADT workflow for A02, A03 and A08',\n      );\n    }\n    this.validateEncounterFields(dto);\n    const patient = await this.patientService.getPatientById(dto.patientId);\n    if (!patient.active) {\n      throw new BadRequestException('Cannot admit an inactive patient');\n    }\n    const active = await this.encounterRepository.findActiveByPatient(\n      dto.patientId,\n    );\n    if (active) {\n      throw new ConflictException(\n        `Patient already has an active encounter (id: ${active.id})`,\n      );\n    }\n    const encounter = this.encounterRepository.create({\n      ...dto,\n      admitDate: new Date(dto.admitDate),\n      status: EncounterStatus.ADMITTED,\n      ward: dto.ward ?? null,\n      transferDate: null,\n      dischargeDate: null,\n    });\n    return this.encounterRepository.save(encounter);\n  }",
         "constructorDependencies": [
           {
             "name": "encounterRepository",
@@ -40,6 +40,12 @@
           }
         ],
         "dependencyCalls": [
+          {
+            "method": "this.validateEncounterFields",
+            "kind": "validation",
+            "isAsync": false,
+            "returnUsed": false
+          },
           {
             "method": "this.patientService.getPatientById",
             "kind": "query",
@@ -64,23 +70,32 @@
           {
             "method": "this.encounterRepository.save",
             "kind": "repository_save",
-            "isAsync": false,
+            "isAsync": true,
             "returnUsed": true
           }
         ],
         "transformations": [],
         "calledMethods": [
+          "this.validateEncounterFields",
           "this.patientService.getPatientById",
           "this.encounterRepository.findActiveByPatient",
           "this.encounterRepository.create",
           "this.encounterRepository.save"
         ],
-        "relatedMethods": [],
+        "relatedMethods": [
+          "validateEncounterFields(dto: CreateEncounterDto): void"
+        ],
         "businessRules": [
+          "Only ADT A01 can create an encounter; use the ADT workflow for A02, A03 and A08",
           "Cannot admit an inactive patient",
           "Patient already has an active encounter (id: <value>)"
         ],
         "branches": [
+          {
+            "condition": "dto.adtType !== AdtType.A01",
+            "calledMethods": [],
+            "throws": "BadRequestException"
+          },
           {
             "condition": "!patient.active",
             "calledMethods": [],
@@ -134,6 +149,10 @@
           {
             "symbol": "EncounterStatus",
             "importPath": "./enums/encounter-status.enum"
+          },
+          {
+            "symbol": "AdtType",
+            "importPath": "./enums/adt-type.enum"
           }
         ],
         "relevantDtos": [
@@ -277,10 +296,10 @@
       "layer": "service",
       "source_file": "src/encounter/encounter.service.ts",
       "test_output_file": "src/encounter/encounter.service.spec.ts",
-      "line": 58,
-      "end_line": 84,
+      "line": 65,
+      "end_line": 91,
       "loc": 27,
-      "source_hash": "cefaed57",
+      "source_hash": "04a941d1",
       "is_async": false,
       "visibility": "public",
       "parameters": [
@@ -296,7 +315,7 @@
         "functionName": "validateEncounterFields",
         "isAsync": false,
         "methodSignature": "validateEncounterFields(dto: CreateEncounterDto): void",
-        "methodSource": "validateEncounterFields(dto: CreateEncounterDto): void {\r\n    if (dto.adtType === AdtType.A01 && !dto.ward) {\r\n      throw new BadRequestException('Ward is required for ADT A01 (admission)');\r\n    }\r\n    if (dto.adtType === AdtType.A02 && !dto.ward) {\r\n      throw new BadRequestException('Ward is required for ADT A02 (transfer)');\r\n    }\r\n    if (dto.adtType === AdtType.A03 && dto.ward) {\r\n      throw new BadRequestException(\r\n        'Ward must not be informed for ADT A03 (discharge)',\r\n      );\r\n    }\r\n    if (dto.adtType === AdtType.A08 && dto.ward) {\r\n      throw new BadRequestException(\r\n        'Ward must not be informed for ADT A08 (update)',\r\n      );\r\n    }\r\n    if (dto.adtType === AdtType.A08 && !dto.patientId) {\r\n      throw new BadRequestException(\r\n        'PatientId is required for ADT A08 (update)',\r\n      );\r\n    }\r\n  }",
+        "methodSource": "validateEncounterFields(dto: CreateEncounterDto): void {\n    if (dto.adtType === AdtType.A01 && !dto.ward) {\n      throw new BadRequestException('Ward is required for ADT A01 (admission)');\n    }\n    if (dto.adtType === AdtType.A02 && !dto.ward) {\n      throw new BadRequestException('Ward is required for ADT A02 (transfer)');\n    }\n    if (dto.adtType === AdtType.A03 && dto.ward) {\n      throw new BadRequestException(\n        'Ward must not be informed for ADT A03 (discharge)',\n      );\n    }\n    if (dto.adtType === AdtType.A08 && dto.ward) {\n      throw new BadRequestException(\n        'Ward must not be informed for ADT A08 (update)',\n      );\n    }\n    if (dto.adtType === AdtType.A08 && !dto.patientId) {\n      throw new BadRequestException(\n        'PatientId is required for ADT A08 (update)',\n      );\n    }\n  }",
         "constructorDependencies": [
           {
             "name": "encounterRepository",
@@ -431,10 +450,10 @@
       "layer": "service",
       "source_file": "src/encounter/encounter.service.ts",
       "test_output_file": "src/encounter/encounter.service.spec.ts",
-      "line": 86,
-      "end_line": 92,
+      "line": 93,
+      "end_line": 99,
       "loc": 7,
-      "source_hash": "cefaed57",
+      "source_hash": "04a941d1",
       "is_async": true,
       "visibility": "public",
       "parameters": [
@@ -454,7 +473,7 @@
         "functionName": "listEncountersByPatient",
         "isAsync": true,
         "methodSignature": "listEncountersByPatient(patientId: string, dto: ListEncountersByPatientDto): Promise<Encounter[]>",
-        "methodSource": "async listEncountersByPatient(\r\n    patientId: string,\r\n    dto: ListEncountersByPatientDto,\r\n  ): Promise<Encounter[]> {\r\n    await this.patientService.getPatientById(patientId);\r\n    return this.encounterRepository.findByPatient(patientId, dto);\r\n  }",
+        "methodSource": "async listEncountersByPatient(\n    patientId: string,\n    dto: ListEncountersByPatientDto,\n  ): Promise<Encounter[]> {\n    await this.patientService.getPatientById(patientId);\n    return this.encounterRepository.findByPatient(patientId, dto);\n  }",
         "constructorDependencies": [
           {
             "name": "encounterRepository",
@@ -475,7 +494,7 @@
           {
             "method": "this.encounterRepository.findByPatient",
             "kind": "query",
-            "isAsync": false,
+            "isAsync": true,
             "returnUsed": true
           }
         ],
@@ -642,10 +661,10 @@
       "layer": "service",
       "source_file": "src/encounter/encounter.service.ts",
       "test_output_file": "src/encounter/encounter.service.spec.ts",
-      "line": 94,
-      "end_line": 100,
+      "line": 101,
+      "end_line": 107,
       "loc": 7,
-      "source_hash": "cefaed57",
+      "source_hash": "04a941d1",
       "is_async": true,
       "visibility": "public",
       "parameters": [
@@ -661,7 +680,7 @@
         "functionName": "getEncounterById",
         "isAsync": true,
         "methodSignature": "getEncounterById(id: string): Promise<Encounter>",
-        "methodSource": "async getEncounterById(id: string): Promise<Encounter> {\r\n    const encounter = await this.encounterRepository.findById(id);\r\n    if (!encounter) {\r\n      throw new NotFoundException(`Encounter with id ${id} not found`);\r\n    }\r\n    return encounter;\r\n  }",
+        "methodSource": "async getEncounterById(id: string): Promise<Encounter> {\n    const encounter = await this.encounterRepository.findById(id);\n    if (!encounter) {\n      throw new NotFoundException(`Encounter with id ${id} not found`);\n    }\n    return encounter;\n  }",
         "constructorDependencies": [
           {
             "name": "encounterRepository",
@@ -828,10 +847,10 @@
       "layer": "service",
       "source_file": "src/encounter/encounter.service.ts",
       "test_output_file": "src/encounter/encounter.service.spec.ts",
-      "line": 102,
-      "end_line": 190,
+      "line": 109,
+      "end_line": 197,
       "loc": 89,
-      "source_hash": "cefaed57",
+      "source_hash": "04a941d1",
       "is_async": true,
       "visibility": "public",
       "parameters": [
@@ -851,7 +870,7 @@
         "functionName": "transitionEncounterStatus",
         "isAsync": true,
         "methodSignature": "transitionEncounterStatus(id: string, dto: TransitionEncounterStatusDto): Promise<Encounter>",
-        "methodSource": "async transitionEncounterStatus(\r\n    id: string,\r\n    dto: TransitionEncounterStatusDto,\r\n  ): Promise<Encounter> {\r\n    const encounter = await this.getEncounterById(id);\r\n    const { status: currentStatus } = encounter;\r\n    const { status: nextStatus } = dto;\r\n    const validTransitions: Record<EncounterStatus, EncounterStatus[]> = {\r\n      [EncounterStatus.ADMITTED]: [\r\n        EncounterStatus.TRANSFERRED,\r\n        EncounterStatus.DISCHARGED,\r\n      ],\r\n      [EncounterStatus.TRANSFERRED]: [EncounterStatus.DISCHARGED],\r\n      [EncounterStatus.DISCHARGED]: [],\r\n    };\r\n    if (!validTransitions[currentStatus].includes(nextStatus)) {\r\n      throw new BadRequestException(\r\n        `Invalid status transition from ${currentStatus} to ${nextStatus}`,\r\n      );\r\n    }\r\n    if (nextStatus === EncounterStatus.DISCHARGED) {\r\n      const hasPendingOrders = encounter.orders?.some(\r\n        (order) =>\r\n          order.status === OrderStatus.PENDING ||\r\n          order.status === OrderStatus.IN_PROGRESS,\r\n      );\r\n      if (hasPendingOrders) {\r\n        throw new BadRequestException(\r\n          'Cannot discharge encounter with pending or in-progress orders',\r\n        );\r\n      }\r\n    }\r\n    if (nextStatus === EncounterStatus.TRANSFERRED) {\r\n      if (!dto.ward) {\r\n        throw new BadRequestException('Ward is required for transfer');\r\n      }\r\n      if (dto.ward === encounter.ward) {\r\n        throw new BadRequestException(\r\n          `Transfer requires a different ward. Current ward: ${encounter.ward}`,\r\n        );\r\n      }\r\n    }\r\n    if (nextStatus === EncounterStatus.TRANSFERRED) {\r\n      if (!dto.transferDate) {\r\n        throw new BadRequestException('transferDate is required for transfer');\r\n      }\r\n      const transferDate = new Date(dto.transferDate);\r\n      if (transferDate <= encounter.admitDate) {\r\n        throw new BadRequestException('transferDate must be after admitDate');\r\n      }\r\n      encounter.transferDate = transferDate;\r\n      encounter.ward = dto.ward as Ward;\r\n    }\r\n    if (nextStatus === EncounterStatus.DISCHARGED) {\r\n      if (!dto.dischargeDate) {\r\n        throw new BadRequestException(\r\n          'dischargeDate is required for discharge',\r\n        );\r\n      }\r\n      const dischargeDate = new Date(dto.dischargeDate);\r\n      if (dischargeDate <= encounter.admitDate) {\r\n        throw new BadRequestException('dischargeDate must be after admitDate');\r\n      }\r\n      if (encounter.transferDate && dischargeDate <= encounter.transferDate) {\r\n        throw new BadRequestException(\r\n          'dischargeDate must be after transferDate',\r\n        );\r\n      }\r\n      encounter.dischargeDate = dischargeDate;\r\n    }\r\n    if (\r\n      encounter.adtType === AdtType.A08 &&\r\n      nextStatus !== EncounterStatus.ADMITTED\r\n    ) {\r\n      throw new BadRequestException(\r\n        'ADT A08 encounters cannot have status transitions',\r\n      );\r\n    }\r\n    encounter.status = nextStatus;\r\n    return this.encounterRepository.save(encounter);\r\n  }",
+        "methodSource": "async transitionEncounterStatus(\n    id: string,\n    dto: TransitionEncounterStatusDto,\n  ): Promise<Encounter> {\n    const encounter = await this.getEncounterById(id);\n    const { status: currentStatus } = encounter;\n    const { status: nextStatus } = dto;\n    const validTransitions: Record<EncounterStatus, EncounterStatus[]> = {\n      [EncounterStatus.ADMITTED]: [\n        EncounterStatus.TRANSFERRED,\n        EncounterStatus.DISCHARGED,\n      ],\n      [EncounterStatus.TRANSFERRED]: [EncounterStatus.DISCHARGED],\n      [EncounterStatus.DISCHARGED]: [],\n    };\n    if (!validTransitions[currentStatus].includes(nextStatus)) {\n      throw new BadRequestException(\n        `Invalid status transition from ${currentStatus} to ${nextStatus}`,\n      );\n    }\n    if (nextStatus === EncounterStatus.DISCHARGED) {\n      const hasPendingOrders = encounter.orders?.some(\n        (order) =>\n          order.status === OrderStatus.PENDING ||\n          order.status === OrderStatus.IN_PROGRESS,\n      );\n      if (hasPendingOrders) {\n        throw new BadRequestException(\n          'Cannot discharge encounter with pending or in-progress orders',\n        );\n      }\n    }\n    if (nextStatus === EncounterStatus.TRANSFERRED) {\n      if (!dto.ward) {\n        throw new BadRequestException('Ward is required for transfer');\n      }\n      if (dto.ward === encounter.ward) {\n        throw new BadRequestException(\n          `Transfer requires a different ward. Current ward: ${encounter.ward}`,\n        );\n      }\n    }\n    if (nextStatus === EncounterStatus.TRANSFERRED) {\n      if (!dto.transferDate) {\n        throw new BadRequestException('transferDate is required for transfer');\n      }\n      const transferDate = new Date(dto.transferDate);\n      if (transferDate <= encounter.admitDate) {\n        throw new BadRequestException('transferDate must be after admitDate');\n      }\n      encounter.transferDate = transferDate;\n      encounter.ward = dto.ward as Ward;\n    }\n    if (nextStatus === EncounterStatus.DISCHARGED) {\n      if (!dto.dischargeDate) {\n        throw new BadRequestException(\n          'dischargeDate is required for discharge',\n        );\n      }\n      const dischargeDate = new Date(dto.dischargeDate);\n      if (dischargeDate <= encounter.admitDate) {\n        throw new BadRequestException('dischargeDate must be after admitDate');\n      }\n      if (encounter.transferDate && dischargeDate <= encounter.transferDate) {\n        throw new BadRequestException(\n          'dischargeDate must be after transferDate',\n        );\n      }\n      encounter.dischargeDate = dischargeDate;\n    }\n    if (\n      encounter.adtType === AdtType.A08 &&\n      nextStatus !== EncounterStatus.ADMITTED\n    ) {\n      throw new BadRequestException(\n        'ADT A08 encounters cannot have status transitions',\n      );\n    }\n    encounter.status = nextStatus;\n    return this.encounterRepository.save(encounter);\n  }",
         "constructorDependencies": [
           {
             "name": "encounterRepository",
@@ -871,29 +890,16 @@
             "assignedTo": "encounter"
           },
           {
-            "method": "validTransitions[currentStatus].includes",
-            "kind": "external_service",
-            "isAsync": false,
-            "returnUsed": false
-          },
-          {
-            "method": "encounter.orders?.some",
-            "kind": "external_service",
-            "isAsync": false,
-            "returnUsed": true,
-            "assignedTo": "hasPendingOrders"
-          },
-          {
             "method": "this.encounterRepository.save",
             "kind": "repository_save",
-            "isAsync": false,
+            "isAsync": true,
             "returnUsed": true
           }
         ],
         "transformations": [
           {
             "targetField": "[EncounterStatus.ADMITTED]",
-            "sourceExpression": "[\r\n        EncounterStatus.TRANSFERRED,\r\n        EncounterStatus.DISCHARGED,\r\n      ]",
+            "sourceExpression": "[\n        EncounterStatus.TRANSFERRED,\n        EncounterStatus.DISCHARGED,\n      ]",
             "kind": "mapping"
           },
           {
@@ -997,7 +1003,7 @@
             "throws": "BadRequestException"
           },
           {
-            "condition": "encounter.adtType === AdtType.A08 &&\r\n      nextStatus !== EncounterStatus.ADMITTED",
+            "condition": "encounter.adtType === AdtType.A08 &&\n      nextStatus !== EncounterStatus.ADMITTED",
             "calledMethods": [],
             "throws": "BadRequestException"
           }
@@ -1206,10 +1212,10 @@
       "layer": "service",
       "source_file": "src/encounter/encounter.service.ts",
       "test_output_file": "src/encounter/encounter.service.spec.ts",
-      "line": 192,
-      "end_line": 305,
-      "loc": 114,
-      "source_hash": "cefaed57",
+      "line": 199,
+      "end_line": 317,
+      "loc": 119,
+      "source_hash": "04a941d1",
       "is_async": true,
       "visibility": "public",
       "parameters": [
@@ -1219,13 +1225,13 @@
         }
       ],
       "return_type": "Promise<{ patient: Patient; encounter?: Encounter | undefined; }>",
-      "ccm": 20,
+      "ccm": 21,
       "range": "high",
       "context": {
         "functionName": "processAdtMessage",
         "isAsync": true,
         "methodSignature": "processAdtMessage(dto: AdtMessageDto): Promise<{ patient: Patient; encounter?: Encounter | undefined; }>",
-        "methodSource": "async processAdtMessage(\r\n    dto: AdtMessageDto,\r\n  ): Promise<{ patient: Patient; encounter?: Encounter }> {\r\n    if (dto.adtType === AdtType.A01) {\r\n      if (!dto.name || !dto.birthDate || !dto.sex || !dto.admitDate) {\r\n        throw new BadRequestException(\r\n          'A01 requires: name, birthDate, sex, admitDate',\r\n        );\r\n      }\r\n      let patient = await this.patientService.findByCpfOrFail(dto.cpf);\r\n      if (!patient) {\r\n        patient = await this.patientService.createPatient({\r\n          cpf: dto.cpf,\r\n          name: dto.name,\r\n          birthDate: dto.birthDate,\r\n          sex: dto.sex,\r\n          email: dto.email,\r\n          phone: dto.phone,\r\n        });\r\n      }\r\n      const encounter = await this.createEncounter({\r\n        patientId: patient.id,\r\n        adtType: AdtType.A01,\r\n        admitDate: dto.admitDate,\r\n        ward: dto.ward,\r\n      });\r\n      return { patient, encounter };\r\n    }\r\n    if (dto.adtType === AdtType.A02) {\r\n      if (!dto.ward || !dto.transferDate) {\r\n        throw new BadRequestException('A02 requires: ward, transferDate');\r\n      }\r\n      const patient = await this.patientService.findByCpfOrFail(dto.cpf);\r\n      const encounter = await this.encounterRepository.findActiveByPatient(\r\n        patient.id,\r\n      );\r\n      if (!encounter) {\r\n        throw new NotFoundException(\r\n          `No active encounter found for patient with cpf ${dto.cpf}`,\r\n        );\r\n      }\r\n      const transitionDto: TransitionEncounterStatusDto = {\r\n        status: EncounterStatus.TRANSFERRED,\r\n        ward: dto.ward,\r\n        transferDate: dto.transferDate,\r\n      };\r\n      const updated = await this.transitionEncounterStatus(\r\n        encounter.id,\r\n        transitionDto,\r\n      );\r\n      return { patient, encounter: updated };\r\n    }\r\n    if (dto.adtType === AdtType.A03) {\r\n      if (!dto.dischargeDate) {\r\n        throw new BadRequestException('A03 requires: dischargeDate');\r\n      }\r\n      const patient = await this.patientService.findByCpfOrFail(dto.cpf);\r\n      const encounter = await this.encounterRepository.findActiveByPatient(\r\n        patient.id,\r\n      );\r\n      if (!encounter) {\r\n        throw new NotFoundException(\r\n          `No active encounter found for patient with cpf ${dto.cpf}`,\r\n        );\r\n      }\r\n      const transitionDto: TransitionEncounterStatusDto = {\r\n        status: EncounterStatus.DISCHARGED,\r\n        dischargeDate: dto.dischargeDate,\r\n      };\r\n      const updated = await this.transitionEncounterStatus(\r\n        encounter.id,\r\n        transitionDto,\r\n      );\r\n      return { patient, encounter: updated };\r\n    }\r\n    if (dto.adtType === AdtType.A08) {\r\n      if (!dto.name && !dto.birthDate && !dto.sex && !dto.email && !dto.phone) {\r\n        throw new BadRequestException(\r\n          'A08 requires at least one field to update: name, birthDate, sex, email or phone',\r\n        );\r\n      }\r\n      const patient = await this.patientService.findByCpfOrFail(dto.cpf);\r\n      const updated = await this.patientService.updatePatient(patient.id, {\r\n        name: dto.name,\r\n        birthDate: dto.birthDate,\r\n        sex: dto.sex,\r\n        email: dto.email,\r\n        phone: dto.phone,\r\n      });\r\n      return { patient: updated };\r\n    }\r\n    throw new BadRequestException(`Unsupported ADT type: ${dto.adtType}`);\r\n  }",
+        "methodSource": "async processAdtMessage(\n    dto: AdtMessageDto,\n  ): Promise<{ patient: Patient; encounter?: Encounter }> {\n    if (dto.adtType === AdtType.A01) {\n      if (!dto.name || !dto.birthDate || !dto.sex || !dto.admitDate) {\n        throw new BadRequestException(\n          'A01 requires: name, birthDate, sex, admitDate',\n        );\n      }\n      let patient: Patient;\n      try {\n        patient = await this.patientService.findByCpfOrFail(dto.cpf);\n      } catch (error) {\n        if (!(error instanceof NotFoundException)) {\n          throw error;\n        }\n        patient = await this.patientService.createPatient({\n          cpf: dto.cpf,\n          name: dto.name,\n          birthDate: dto.birthDate,\n          sex: dto.sex,\n          email: dto.email,\n          phone: dto.phone,\n        });\n      }\n      const encounter = await this.createEncounter({\n        patientId: patient.id,\n        adtType: AdtType.A01,\n        admitDate: dto.admitDate,\n        ward: dto.ward,\n      });\n      return { patient, encounter };\n    }\n    if (dto.adtType === AdtType.A02) {\n      if (!dto.ward || !dto.transferDate) {\n        throw new BadRequestException('A02 requires: ward, transferDate');\n      }\n      const patient = await this.patientService.findByCpfOrFail(dto.cpf);\n      const encounter = await this.encounterRepository.findActiveByPatient(\n        patient.id,\n      );\n      if (!encounter) {\n        throw new NotFoundException(\n          `No active encounter found for patient with cpf ${dto.cpf}`,\n        );\n      }\n      const transitionDto: TransitionEncounterStatusDto = {\n        status: EncounterStatus.TRANSFERRED,\n        ward: dto.ward,\n        transferDate: dto.transferDate,\n      };\n      const updated = await this.transitionEncounterStatus(\n        encounter.id,\n        transitionDto,\n      );\n      return { patient, encounter: updated };\n    }\n    if (dto.adtType === AdtType.A03) {\n      if (!dto.dischargeDate) {\n        throw new BadRequestException('A03 requires: dischargeDate');\n      }\n      const patient = await this.patientService.findByCpfOrFail(dto.cpf);\n      const encounter = await this.encounterRepository.findActiveByPatient(\n        patient.id,\n      );\n      if (!encounter) {\n        throw new NotFoundException(\n          `No active encounter found for patient with cpf ${dto.cpf}`,\n        );\n      }\n      const transitionDto: TransitionEncounterStatusDto = {\n        status: EncounterStatus.DISCHARGED,\n        dischargeDate: dto.dischargeDate,\n      };\n      const updated = await this.transitionEncounterStatus(\n        encounter.id,\n        transitionDto,\n      );\n      return { patient, encounter: updated };\n    }\n    if (dto.adtType === AdtType.A08) {\n      if (!dto.name && !dto.birthDate && !dto.sex && !dto.email && !dto.phone) {\n        throw new BadRequestException(\n          'A08 requires at least one field to update: name, birthDate, sex, email or phone',\n        );\n      }\n      const patient = await this.patientService.findByCpfOrFail(dto.cpf);\n      const updated = await this.patientService.updatePatient(patient.id, {\n        name: dto.name,\n        birthDate: dto.birthDate,\n        sex: dto.sex,\n        email: dto.email,\n        phone: dto.phone,\n      });\n      return { patient: updated };\n    }\n    throw new BadRequestException(`Unsupported ADT type: ${dto.adtType}`);\n  }",
         "constructorDependencies": [
           {
             "name": "encounterRepository",
@@ -1241,8 +1247,7 @@
             "method": "this.patientService.findByCpfOrFail",
             "kind": "query",
             "isAsync": true,
-            "returnUsed": true,
-            "assignedTo": "patient"
+            "returnUsed": false
           },
           {
             "method": "this.patientService.createPatient",
@@ -1468,10 +1473,8 @@
             "throws": "BadRequestException"
           },
           {
-            "condition": "!patient",
-            "calledMethods": [
-              "this.patientService.createPatient"
-            ]
+            "condition": "!(error instanceof NotFoundException)",
+            "calledMethods": []
           },
           {
             "condition": "dto.adtType === AdtType.A02",
@@ -1861,10 +1864,10 @@
       "layer": "service",
       "source_file": "src/encounter/encounter.service.ts",
       "test_output_file": "src/encounter/encounter.service.spec.ts",
-      "line": 307,
-      "end_line": 351,
+      "line": 319,
+      "end_line": 363,
       "loc": 45,
-      "source_hash": "cefaed57",
+      "source_hash": "04a941d1",
       "is_async": true,
       "visibility": "public",
       "parameters": [
@@ -1884,7 +1887,7 @@
         "functionName": "updateEncounter",
         "isAsync": true,
         "methodSignature": "updateEncounter(id: string, dto: UpdateEncounterDto): Promise<Encounter>",
-        "methodSource": "async updateEncounter(\r\n    id: string,\r\n    dto: UpdateEncounterDto,\r\n  ): Promise<Encounter> {\r\n    const encounter = await this.getEncounterById(id);\r\n    if (encounter.status === EncounterStatus.DISCHARGED) {\r\n      throw new BadRequestException('Cannot update a discharged encounter');\r\n    }\r\n    if (dto.admitDate !== undefined) {\r\n      if (encounter.status !== EncounterStatus.ADMITTED) {\r\n        throw new BadRequestException(\r\n          'admitDate can only be updated when encounter is ADMITTED',\r\n        );\r\n      }\r\n      const admitDate = new Date(dto.admitDate);\r\n      const now = new Date();\r\n      if (admitDate > now) {\r\n        throw new BadRequestException('admitDate cannot be a future date');\r\n      }\r\n      if (\r\n        encounter.transferDate &&\r\n        admitDate >= new Date(encounter.transferDate)\r\n      ) {\r\n        throw new BadRequestException('admitDate must be before transferDate');\r\n      }\r\n      encounter.admitDate = admitDate;\r\n    }\r\n    if (dto.ward !== undefined) {\r\n      if (dto.ward === encounter.ward) {\r\n        throw new BadRequestException(\r\n          `Ward is already ${encounter.ward}. Use status transition for transfers`,\r\n        );\r\n      }\r\n      encounter.ward = dto.ward;\r\n    }\r\n    return this.encounterRepository.save(encounter);\r\n  }",
+        "methodSource": "async updateEncounter(\n    id: string,\n    dto: UpdateEncounterDto,\n  ): Promise<Encounter> {\n    const encounter = await this.getEncounterById(id);\n    if (encounter.status === EncounterStatus.DISCHARGED) {\n      throw new BadRequestException('Cannot update a discharged encounter');\n    }\n    if (dto.admitDate !== undefined) {\n      if (encounter.status !== EncounterStatus.ADMITTED) {\n        throw new BadRequestException(\n          'admitDate can only be updated when encounter is ADMITTED',\n        );\n      }\n      const admitDate = new Date(dto.admitDate);\n      const now = new Date();\n      if (admitDate > now) {\n        throw new BadRequestException('admitDate cannot be a future date');\n      }\n      if (\n        encounter.transferDate &&\n        admitDate >= new Date(encounter.transferDate)\n      ) {\n        throw new BadRequestException('admitDate must be before transferDate');\n      }\n      encounter.admitDate = admitDate;\n    }\n    if (dto.ward !== undefined) {\n      if (dto.ward === encounter.ward) {\n        throw new BadRequestException(\n          `Ward is already ${encounter.ward}. Use status transition for transfers`,\n        );\n      }\n      encounter.ward = dto.ward;\n    }\n    return this.encounterRepository.save(encounter);\n  }",
         "constructorDependencies": [
           {
             "name": "encounterRepository",
@@ -1906,7 +1909,7 @@
           {
             "method": "this.encounterRepository.save",
             "kind": "repository_save",
-            "isAsync": false,
+            "isAsync": true,
             "returnUsed": true
           }
         ],
@@ -1947,7 +1950,7 @@
             "throws": "BadRequestException"
           },
           {
-            "condition": "encounter.transferDate &&\r\n        admitDate >= new Date(encounter.transferDate)",
+            "condition": "encounter.transferDate &&\n        admitDate >= new Date(encounter.transferDate)",
             "calledMethods": [],
             "throws": "BadRequestException"
           },
@@ -2130,10 +2133,10 @@
       "layer": "service",
       "source_file": "src/encounter/encounter.service.ts",
       "test_output_file": "src/encounter/encounter.service.spec.ts",
-      "line": 353,
-      "end_line": 427,
+      "line": 365,
+      "end_line": 439,
       "loc": 75,
-      "source_hash": "cefaed57",
+      "source_hash": "04a941d1",
       "is_async": true,
       "visibility": "public",
       "parameters": [
@@ -2149,7 +2152,7 @@
         "functionName": "buildEncounterSummary",
         "isAsync": true,
         "methodSignature": "buildEncounterSummary(id: string): Promise<EncounterSummary>",
-        "methodSource": "async buildEncounterSummary(id: string): Promise<EncounterSummary> {\r\n    const encounter = await this.getEncounterById(id);\r\n    const patient = await this.patientService.getPatientById(\r\n      encounter.patientId,\r\n    );\r\n    const admitDate = new Date(encounter.admitDate);\r\n    const now = new Date();\r\n    const activeDays = Math.floor(\r\n      (now.getTime() - admitDate.getTime()) / (1000 * 60 * 60 * 24),\r\n    );\r\n    const orderSummary = {\r\n      total: 0,\r\n      pending: 0,\r\n      inProgress: 0,\r\n      completed: 0,\r\n      cancelled: 0,\r\n    };\r\n    const resultSummary = {\r\n      total: 0,\r\n      abnormal: 0,\r\n      preliminary: 0,\r\n    };\r\n    for (const order of encounter.orders ?? []) {\r\n      orderSummary.total++;\r\n      if (order.status === OrderStatus.PENDING) orderSummary.pending++;\r\n      else if (order.status === OrderStatus.IN_PROGRESS)\r\n        orderSummary.inProgress++;\r\n      else if (order.status === OrderStatus.COMPLETED) orderSummary.completed++;\r\n      else if (order.status === OrderStatus.CANCELLED) orderSummary.cancelled++;\r\n      for (const result of order.results ?? []) {\r\n        resultSummary.total++;\r\n        if (result.status === ResultStatus.PRELIMINARY) {\r\n          resultSummary.preliminary++;\r\n        }\r\n        const value = Number(result.value);\r\n        const refMin = result.referenceMin ? Number(result.referenceMin) : null;\r\n        const refMax = result.referenceMax ? Number(result.referenceMax) : null;\r\n        const isAbnormal =\r\n          (refMin !== null && value < refMin) ||\r\n          (refMax !== null && value > refMax);\r\n        if (isAbnormal) resultSummary.abnormal++;\r\n      }\r\n    }\r\n    const hasAbnormalResults = resultSummary.abnormal > 0;\r\n    let riskFlag: 'LOW' | 'MEDIUM' | 'HIGH';\r\n    if (hasAbnormalResults && activeDays > 7) {\r\n      riskFlag = 'HIGH';\r\n    } else if (hasAbnormalResults || activeDays > 7) {\r\n      riskFlag = 'MEDIUM';\r\n    } else {\r\n      riskFlag = 'LOW';\r\n    }\r\n    return {\r\n      encounter,\r\n      patient,\r\n      activeDays,\r\n      orders: orderSummary,\r\n      results: resultSummary,\r\n      hasAbnormalResults,\r\n      riskFlag,\r\n    };\r\n  }",
+        "methodSource": "async buildEncounterSummary(id: string): Promise<EncounterSummary> {\n    const encounter = await this.getEncounterById(id);\n    const patient = await this.patientService.getPatientById(\n      encounter.patientId,\n    );\n    const admitDate = new Date(encounter.admitDate);\n    const now = new Date();\n    const activeDays = Math.floor(\n      (now.getTime() - admitDate.getTime()) / (1000 * 60 * 60 * 24),\n    );\n    const orderSummary = {\n      total: 0,\n      pending: 0,\n      inProgress: 0,\n      completed: 0,\n      cancelled: 0,\n    };\n    const resultSummary = {\n      total: 0,\n      abnormal: 0,\n      preliminary: 0,\n    };\n    for (const order of encounter.orders ?? []) {\n      orderSummary.total++;\n      if (order.status === OrderStatus.PENDING) orderSummary.pending++;\n      else if (order.status === OrderStatus.IN_PROGRESS)\n        orderSummary.inProgress++;\n      else if (order.status === OrderStatus.COMPLETED) orderSummary.completed++;\n      else if (order.status === OrderStatus.CANCELLED) orderSummary.cancelled++;\n      for (const result of order.results ?? []) {\n        resultSummary.total++;\n        if (result.status === ResultStatus.PRELIMINARY) {\n          resultSummary.preliminary++;\n        }\n        const value = Number(result.value);\n        const refMin = result.referenceMin !== null ? Number(result.referenceMin) : null;\n        const refMax = result.referenceMax !== null ? Number(result.referenceMax) : null;\n        const isAbnormal =\n          (refMin !== null && value < refMin) ||\n          (refMax !== null && value > refMax);\n        if (isAbnormal) resultSummary.abnormal++;\n      }\n    }\n    const hasAbnormalResults = resultSummary.abnormal > 0;\n    let riskFlag: 'LOW' | 'MEDIUM' | 'HIGH';\n    if (hasAbnormalResults && activeDays > 7) {\n      riskFlag = 'HIGH';\n    } else if (hasAbnormalResults || activeDays > 7) {\n      riskFlag = 'MEDIUM';\n    } else {\n      riskFlag = 'LOW';\n    }\n    return {\n      encounter,\n      patient,\n      activeDays,\n      orders: orderSummary,\n      results: resultSummary,\n      hasAbnormalResults,\n      riskFlag,\n    };\n  }",
         "constructorDependencies": [
           {
             "name": "encounterRepository",
@@ -2174,27 +2177,6 @@
             "isAsync": true,
             "returnUsed": true,
             "assignedTo": "patient"
-          },
-          {
-            "method": "Math.floor",
-            "kind": "external_service",
-            "isAsync": false,
-            "returnUsed": true,
-            "assignedTo": "activeDays"
-          },
-          {
-            "method": "now.getTime",
-            "kind": "query",
-            "isAsync": false,
-            "returnUsed": true,
-            "assignedTo": "activeDays"
-          },
-          {
-            "method": "admitDate.getTime",
-            "kind": "query",
-            "isAsync": false,
-            "returnUsed": true,
-            "assignedTo": "activeDays"
           }
         ],
         "transformations": [
@@ -2426,7 +2408,7 @@
       "line": 26,
       "end_line": 32,
       "loc": 7,
-      "source_hash": "8f7d4145",
+      "source_hash": "556cd6ea",
       "is_async": true,
       "visibility": "public",
       "parameters": [
@@ -2442,7 +2424,7 @@
         "functionName": "getOrderById",
         "isAsync": true,
         "methodSignature": "getOrderById(id: string): Promise<Order>",
-        "methodSource": "async getOrderById(id: string): Promise<Order> {\r\n    const order = await this.orderRepository.findById(id);\r\n    if (!order) {\r\n      throw new NotFoundException(`Order with id ${id} not found`);\r\n    }\r\n    return order;\r\n  }",
+        "methodSource": "async getOrderById(id: string): Promise<Order> {\n    const order = await this.orderRepository.findById(id);\n    if (!order) {\n      throw new NotFoundException(`Order with id ${id} not found`);\n    }\n    return order;\n  }",
         "constructorDependencies": [
           {
             "name": "orderRepository",
@@ -2598,7 +2580,7 @@
       "line": 34,
       "end_line": 70,
       "loc": 37,
-      "source_hash": "8f7d4145",
+      "source_hash": "556cd6ea",
       "is_async": true,
       "visibility": "public",
       "parameters": [
@@ -2614,7 +2596,7 @@
         "functionName": "createOrder",
         "isAsync": true,
         "methodSignature": "createOrder(dto: CreateOrderDto): Promise<Order>",
-        "methodSource": "async createOrder(dto: CreateOrderDto): Promise<Order> {\r\n    const encounter = await this.encounterService.getEncounterById(\r\n      dto.encounterId,\r\n    );\r\n    if (encounter.status === EncounterStatus.DISCHARGED) {\r\n      throw new BadRequestException(\r\n        'Cannot create order for a discharged encounter',\r\n      );\r\n    }\r\n    if (new Date(dto.requestedAt) < new Date(encounter.admitDate)) {\r\n      throw new BadRequestException(\r\n        'Order date cannot be before admission date',\r\n      );\r\n    }\r\n    const existing = await this.orderRepository.existsPendingOrder(\r\n      dto.encounterId,\r\n      dto.examType,\r\n    );\r\n    if (existing) {\r\n      throw new ConflictException(\r\n        'A pending order for this exam already exists',\r\n      );\r\n    }\r\n    const order = this.orderRepository.create({\r\n      ...dto,\r\n      requestedAt: new Date(dto.requestedAt),\r\n      status: OrderStatus.PENDING,\r\n      notes: dto.notes ?? null,\r\n    });\r\n    return this.orderRepository.save(order);\r\n  }",
+        "methodSource": "async createOrder(dto: CreateOrderDto): Promise<Order> {\n    const encounter = await this.encounterService.getEncounterById(\n      dto.encounterId,\n    );\n    if (encounter.status === EncounterStatus.DISCHARGED) {\n      throw new BadRequestException(\n        'Cannot create order for a discharged encounter',\n      );\n    }\n    if (new Date(dto.requestedAt) < new Date(encounter.admitDate)) {\n      throw new BadRequestException(\n        'Order date cannot be before admission date',\n      );\n    }\n    const existing = await this.orderRepository.existsPendingOrder(\n      dto.encounterId,\n      dto.examType,\n    );\n    if (existing) {\n      throw new ConflictException(\n        'A pending order for this exam already exists',\n      );\n    }\n    const order = this.orderRepository.create({\n      ...dto,\n      requestedAt: new Date(dto.requestedAt),\n      status: OrderStatus.PENDING,\n      notes: dto.notes ?? null,\n    });\n    return this.orderRepository.save(order);\n  }",
         "constructorDependencies": [
           {
             "name": "orderRepository",
@@ -2650,7 +2632,7 @@
           {
             "method": "this.orderRepository.save",
             "kind": "repository_save",
-            "isAsync": false,
+            "isAsync": true,
             "returnUsed": true
           }
         ],
@@ -2872,8 +2854,8 @@
       "line": 72,
       "end_line": 74,
       "loc": 3,
-      "source_hash": "8f7d4145",
-      "is_async": false,
+      "source_hash": "556cd6ea",
+      "is_async": true,
       "visibility": "public",
       "parameters": [
         {
@@ -2886,9 +2868,9 @@
       "range": "low",
       "context": {
         "functionName": "searchOrders",
-        "isAsync": false,
+        "isAsync": true,
         "methodSignature": "searchOrders(dto: SearchOrdersDto): Promise<Order[]>",
-        "methodSource": "searchOrders(dto: SearchOrdersDto): Promise<Order[]> {\r\n    return this.orderRepository.search(dto);\r\n  }",
+        "methodSource": "searchOrders(dto: SearchOrdersDto): Promise<Order[]> {\n    return this.orderRepository.search(dto);\n  }",
         "constructorDependencies": [
           {
             "name": "orderRepository",
@@ -2903,7 +2885,7 @@
           {
             "method": "this.orderRepository.search",
             "kind": "query",
-            "isAsync": false,
+            "isAsync": true,
             "returnUsed": true
           }
         ],
@@ -3068,8 +3050,8 @@
       "line": 76,
       "end_line": 78,
       "loc": 3,
-      "source_hash": "8f7d4145",
-      "is_async": false,
+      "source_hash": "556cd6ea",
+      "is_async": true,
       "visibility": "public",
       "parameters": [
         {
@@ -3082,9 +3064,9 @@
       "range": "low",
       "context": {
         "functionName": "searchOrdersAdvanced",
-        "isAsync": false,
+        "isAsync": true,
         "methodSignature": "searchOrdersAdvanced(dto: SearchOrdersAdvancedDto): Promise<PaginatedOrders>",
-        "methodSource": "searchOrdersAdvanced(dto: SearchOrdersAdvancedDto): Promise<PaginatedOrders> {\r\n    return this.orderRepository.searchAdvanced(dto);\r\n  }",
+        "methodSource": "searchOrdersAdvanced(dto: SearchOrdersAdvancedDto): Promise<PaginatedOrders> {\n    return this.orderRepository.searchAdvanced(dto);\n  }",
         "constructorDependencies": [
           {
             "name": "orderRepository",
@@ -3099,7 +3081,7 @@
           {
             "method": "this.orderRepository.searchAdvanced",
             "kind": "query",
-            "isAsync": false,
+            "isAsync": true,
             "returnUsed": true
           }
         ],
@@ -3282,9 +3264,9 @@
       "source_file": "src/order/order.service.ts",
       "test_output_file": "src/order/order.service.spec.ts",
       "line": 80,
-      "end_line": 153,
-      "loc": 74,
-      "source_hash": "8f7d4145",
+      "end_line": 158,
+      "loc": 79,
+      "source_hash": "556cd6ea",
       "is_async": true,
       "visibility": "public",
       "parameters": [
@@ -3298,13 +3280,13 @@
         }
       ],
       "return_type": "Promise<Order>",
-      "ccm": 13,
+      "ccm": 15,
       "range": "high",
       "context": {
         "functionName": "validateOrderResult",
         "isAsync": true,
         "methodSignature": "validateOrderResult(orderId: string, incomingStatus: ResultStatus): Promise<Order>",
-        "methodSource": "async validateOrderResult(\r\n    orderId: string,\r\n    incomingStatus: ResultStatus,\r\n  ): Promise<Order> {\r\n    const order = await this.getOrderById(orderId);\r\n    if (order.status === OrderStatus.CANCELLED) {\r\n      throw new BadRequestException(\r\n        `Cannot add result to a cancelled order (id: ${orderId})`,\r\n      );\r\n    }\r\n    if (order.status === OrderStatus.COMPLETED) {\r\n      throw new BadRequestException(\r\n        `Order already completed (id: ${orderId}). Cannot add another result`,\r\n      );\r\n    }\r\n    const encounter = await this.encounterService.getEncounterById(\r\n      order.encounterId,\r\n    );\r\n    if (encounter.status === EncounterStatus.DISCHARGED) {\r\n      throw new BadRequestException(\r\n        `Cannot add result to an order from a discharged encounter (id: ${order.encounterId})`,\r\n      );\r\n    }\r\n    const hasClosedResult = order.results?.some(\r\n      (r) =>\r\n        (r as unknown as { status: ResultStatus }).status ===\r\n          ResultStatus.FINAL ||\r\n        (r as unknown as { status: ResultStatus }).status ===\r\n          ResultStatus.CORRECTED,\r\n    );\r\n    if (hasClosedResult) {\r\n      throw new BadRequestException(\r\n        `Order (id: ${orderId}) already has a final or corrected result`,\r\n      );\r\n    }\r\n    if (\r\n      order.status === OrderStatus.PENDING &&\r\n      incomingStatus === ResultStatus.FINAL\r\n    ) {\r\n      throw new BadRequestException(\r\n        'Cannot register a FINAL result for a PENDING order. Order must be IN_PROGRESS first',\r\n      );\r\n    }\r\n    if (\r\n      order.status === OrderStatus.PENDING &&\r\n      incomingStatus === ResultStatus.CORRECTED\r\n    ) {\r\n      throw new BadRequestException(\r\n        'Cannot register a CORRECTED result for a PENDING order',\r\n      );\r\n    }\r\n    if (order.status === OrderStatus.PENDING) {\r\n      order.status = OrderStatus.IN_PROGRESS;\r\n      return this.orderRepository.save(order);\r\n    }\r\n    if (\r\n      order.status === OrderStatus.IN_PROGRESS &&\r\n      incomingStatus === ResultStatus.FINAL\r\n    ) {\r\n      order.status = OrderStatus.COMPLETED;\r\n      return this.orderRepository.save(order);\r\n    }\r\n    return order;\r\n  }",
+        "methodSource": "async validateOrderResult(\n    orderId: string,\n    incomingStatus: ResultStatus,\n  ): Promise<Order> {\n    const order = await this.getOrderById(orderId);\n    if (order.status === OrderStatus.CANCELLED) {\n      throw new BadRequestException(\n        `Cannot add result to a cancelled order (id: ${orderId})`,\n      );\n    }\n    const encounter = await this.encounterService.getEncounterById(\n      order.encounterId,\n    );\n    if (encounter.status === EncounterStatus.DISCHARGED) {\n      throw new BadRequestException(\n        `Cannot add result to an order from a discharged encounter (id: ${order.encounterId})`,\n      );\n    }\n    const hasFinalResult = order.results?.some(\n      (r) => (r as { status: ResultStatus }).status === ResultStatus.FINAL,\n    );\n    const hasCorrectedResult = order.results?.some(\n      (r) => (r as { status: ResultStatus }).status === ResultStatus.CORRECTED,\n    );\n    if (incomingStatus === ResultStatus.CORRECTED) {\n      if (order.status !== OrderStatus.COMPLETED) {\n        throw new BadRequestException(\n          'Cannot register a CORRECTED result until the order is COMPLETED',\n        );\n      }\n      if (!hasFinalResult || hasCorrectedResult) {\n        throw new BadRequestException(\n          `Order (id: ${orderId}) must have exactly one final result available for correction`,\n        );\n      }\n      return order;\n    }\n    if (order.status === OrderStatus.COMPLETED) {\n      throw new BadRequestException(\n        `Order already completed (id: ${orderId}). Cannot add another result`,\n      );\n    }\n    if (hasFinalResult || hasCorrectedResult) {\n      throw new BadRequestException(\n        `Order (id: ${orderId}) already has a final or corrected result`,\n      );\n    }\n    if (\n      order.status === OrderStatus.PENDING &&\n      incomingStatus === ResultStatus.FINAL\n    ) {\n      throw new BadRequestException(\n        'Cannot register a FINAL result for a PENDING order. Order must be IN_PROGRESS first',\n      );\n    }\n    if (order.status === OrderStatus.PENDING) {\n      order.status = OrderStatus.IN_PROGRESS;\n      return this.orderRepository.save(order);\n    }\n    if (\n      order.status === OrderStatus.IN_PROGRESS &&\n      incomingStatus === ResultStatus.FINAL\n    ) {\n      order.status = OrderStatus.COMPLETED;\n      return this.orderRepository.save(order);\n    }\n    return order;\n  }",
         "constructorDependencies": [
           {
             "name": "orderRepository",
@@ -3331,22 +3313,15 @@
             "assignedTo": "encounter"
           },
           {
-            "method": "order.results?.some",
-            "kind": "external_service",
-            "isAsync": false,
-            "returnUsed": true,
-            "assignedTo": "hasClosedResult"
-          },
-          {
             "method": "this.orderRepository.save",
             "kind": "repository_save",
-            "isAsync": false,
+            "isAsync": true,
             "returnUsed": true
           },
           {
             "method": "this.orderRepository.save",
             "kind": "repository_save",
-            "isAsync": false,
+            "isAsync": true,
             "returnUsed": true
           }
         ],
@@ -3362,20 +3337,16 @@
         ],
         "businessRules": [
           "Cannot add result to a cancelled order (id: <value>)",
-          "Order already completed (id: <value>). Cannot add another result",
           "Cannot add result to an order from a discharged encounter (id: <value>)",
+          "Cannot register a CORRECTED result until the order is COMPLETED",
+          "Order (id: <value>) must have exactly one final result available for correction",
+          "Order already completed (id: <value>). Cannot add another result",
           "Order (id: <value>) already has a final or corrected result",
-          "Cannot register a FINAL result for a PENDING order. Order must be IN_PROGRESS first",
-          "Cannot register a CORRECTED result for a PENDING order"
+          "Cannot register a FINAL result for a PENDING order. Order must be IN_PROGRESS first"
         ],
         "branches": [
           {
             "condition": "order.status === OrderStatus.CANCELLED",
-            "calledMethods": [],
-            "throws": "BadRequestException"
-          },
-          {
-            "condition": "order.status === OrderStatus.COMPLETED",
             "calledMethods": [],
             "throws": "BadRequestException"
           },
@@ -3385,17 +3356,33 @@
             "throws": "BadRequestException"
           },
           {
-            "condition": "hasClosedResult",
+            "condition": "incomingStatus === ResultStatus.CORRECTED",
+            "calledMethods": [],
+            "throws": "BadRequestException",
+            "returns": "return order;"
+          },
+          {
+            "condition": "order.status !== OrderStatus.COMPLETED",
             "calledMethods": [],
             "throws": "BadRequestException"
           },
           {
-            "condition": "order.status === OrderStatus.PENDING &&\r\n      incomingStatus === ResultStatus.FINAL",
+            "condition": "!hasFinalResult || hasCorrectedResult",
             "calledMethods": [],
             "throws": "BadRequestException"
           },
           {
-            "condition": "order.status === OrderStatus.PENDING &&\r\n      incomingStatus === ResultStatus.CORRECTED",
+            "condition": "order.status === OrderStatus.COMPLETED",
+            "calledMethods": [],
+            "throws": "BadRequestException"
+          },
+          {
+            "condition": "hasFinalResult || hasCorrectedResult",
+            "calledMethods": [],
+            "throws": "BadRequestException"
+          },
+          {
+            "condition": "order.status === OrderStatus.PENDING &&\n      incomingStatus === ResultStatus.FINAL",
             "calledMethods": [],
             "throws": "BadRequestException"
           },
@@ -3407,7 +3394,7 @@
             "returns": "return this.orderRepository.save(order);"
           },
           {
-            "condition": "order.status === OrderStatus.IN_PROGRESS &&\r\n      incomingStatus === ResultStatus.FINAL",
+            "condition": "order.status === OrderStatus.IN_PROGRESS &&\n      incomingStatus === ResultStatus.FINAL",
             "calledMethods": [
               "this.orderRepository.save"
             ],
@@ -3579,10 +3566,10 @@
       "layer": "service",
       "source_file": "src/order/order.service.ts",
       "test_output_file": "src/order/order.service.spec.ts",
-      "line": 155,
-      "end_line": 163,
+      "line": 160,
+      "end_line": 168,
       "loc": 9,
-      "source_hash": "8f7d4145",
+      "source_hash": "556cd6ea",
       "is_async": true,
       "visibility": "public",
       "parameters": [
@@ -3598,7 +3585,7 @@
         "functionName": "cancelOrder",
         "isAsync": true,
         "methodSignature": "cancelOrder(id: string): Promise<Order>",
-        "methodSource": "async cancelOrder(id: string): Promise<Order> {\r\n    const order = await this.getOrderById(id);\r\n    if (order.status === OrderStatus.CANCELLED) {\r\n      throw new BadRequestException(`Order ${id} is already cancelled`);\r\n    }\r\n    order.status = OrderStatus.CANCELLED;\r\n    return this.orderRepository.save(order);\r\n  }",
+        "methodSource": "async cancelOrder(id: string): Promise<Order> {\n    const order = await this.getOrderById(id);\n    if (order.status === OrderStatus.CANCELLED) {\n      throw new BadRequestException(`Order ${id} is already cancelled`);\n    }\n    order.status = OrderStatus.CANCELLED;\n    return this.orderRepository.save(order);\n  }",
         "constructorDependencies": [
           {
             "name": "orderRepository",
@@ -3620,7 +3607,7 @@
           {
             "method": "this.orderRepository.save",
             "kind": "repository_save",
-            "isAsync": false,
+            "isAsync": true,
             "returnUsed": true
           }
         ],
@@ -3771,10 +3758,10 @@
       "layer": "service",
       "source_file": "src/order/order.service.ts",
       "test_output_file": "src/order/order.service.spec.ts",
-      "line": 165,
-      "end_line": 198,
+      "line": 170,
+      "end_line": 203,
       "loc": 34,
-      "source_hash": "8f7d4145",
+      "source_hash": "556cd6ea",
       "is_async": true,
       "visibility": "public",
       "parameters": [
@@ -3794,7 +3781,7 @@
         "functionName": "updateOrder",
         "isAsync": true,
         "methodSignature": "updateOrder(id: string, dto: UpdateOrderDto): Promise<Order>",
-        "methodSource": "async updateOrder(id: string, dto: UpdateOrderDto): Promise<Order> {\r\n    const order = await this.getOrderById(id);\r\n    if (\r\n      order.status === OrderStatus.CANCELLED ||\r\n      order.status === OrderStatus.COMPLETED\r\n    ) {\r\n      throw new BadRequestException(\r\n        `Cannot update order with status ${order.status}`,\r\n      );\r\n    }\r\n    if (\r\n      order.status === OrderStatus.IN_PROGRESS &&\r\n      dto.requestedBy !== undefined\r\n    ) {\r\n      throw new BadRequestException(\r\n        'Cannot update requestedBy for an order in progress. Only notes can be updated',\r\n      );\r\n    }\r\n    const updateData: Partial<Order> = {};\r\n    if (dto.requestedBy !== undefined) {\r\n      updateData.requestedBy = dto.requestedBy;\r\n    }\r\n    if (dto.notes !== undefined) {\r\n      updateData.notes = dto.notes;\r\n    }\r\n    Object.assign(order, updateData);\r\n    return this.orderRepository.save(order);\r\n  }",
+        "methodSource": "async updateOrder(id: string, dto: UpdateOrderDto): Promise<Order> {\n    const order = await this.getOrderById(id);\n    if (\n      order.status === OrderStatus.CANCELLED ||\n      order.status === OrderStatus.COMPLETED\n    ) {\n      throw new BadRequestException(\n        `Cannot update order with status ${order.status}`,\n      );\n    }\n    if (\n      order.status === OrderStatus.IN_PROGRESS &&\n      dto.requestedBy !== undefined\n    ) {\n      throw new BadRequestException(\n        'Cannot update requestedBy for an order in progress. Only notes can be updated',\n      );\n    }\n    const updateData: Partial<Order> = {};\n    if (dto.requestedBy !== undefined) {\n      updateData.requestedBy = dto.requestedBy;\n    }\n    if (dto.notes !== undefined) {\n      updateData.notes = dto.notes;\n    }\n    Object.assign(order, updateData);\n    return this.orderRepository.save(order);\n  }",
         "constructorDependencies": [
           {
             "name": "orderRepository",
@@ -3814,15 +3801,9 @@
             "assignedTo": "order"
           },
           {
-            "method": "Object.assign",
-            "kind": "external_service",
-            "isAsync": false,
-            "returnUsed": false
-          },
-          {
             "method": "this.orderRepository.save",
             "kind": "repository_save",
-            "isAsync": false,
+            "isAsync": true,
             "returnUsed": true
           }
         ],
@@ -3841,12 +3822,12 @@
         ],
         "branches": [
           {
-            "condition": "order.status === OrderStatus.CANCELLED ||\r\n      order.status === OrderStatus.COMPLETED",
+            "condition": "order.status === OrderStatus.CANCELLED ||\n      order.status === OrderStatus.COMPLETED",
             "calledMethods": [],
             "throws": "BadRequestException"
           },
           {
-            "condition": "order.status === OrderStatus.IN_PROGRESS &&\r\n      dto.requestedBy !== undefined",
+            "condition": "order.status === OrderStatus.IN_PROGRESS &&\n      dto.requestedBy !== undefined",
             "calledMethods": [],
             "throws": "BadRequestException"
           },
@@ -4029,7 +4010,7 @@
         "functionName": "getPatientById",
         "isAsync": true,
         "methodSignature": "getPatientById(id: string): Promise<Patient>",
-        "methodSource": "async getPatientById(id: string): Promise<Patient> {\r\n    const patient = await this.patientRepository.findById(id);\r\n    if (!patient) {\r\n      throw new NotFoundException(`Patient with id ${id} not found`);\r\n    }\r\n    return patient;\r\n  }",
+        "methodSource": "async getPatientById(id: string): Promise<Patient> {\n    const patient = await this.patientRepository.findById(id);\n    if (!patient) {\n      throw new NotFoundException(`Patient with id ${id} not found`);\n    }\n    return patient;\n  }",
         "constructorDependencies": [
           {
             "name": "patientRepository",
@@ -4165,7 +4146,7 @@
       "end_line": 25,
       "loc": 3,
       "source_hash": "0ddb42a2",
-      "is_async": false,
+      "is_async": true,
       "visibility": "public",
       "parameters": [],
       "return_type": "Promise<Patient[]>",
@@ -4173,9 +4154,9 @@
       "range": "low",
       "context": {
         "functionName": "listPatients",
-        "isAsync": false,
+        "isAsync": true,
         "methodSignature": "listPatients(): Promise<Patient[]>",
-        "methodSource": "listPatients(): Promise<Patient[]> {\r\n    return this.patientRepository.findAll();\r\n  }",
+        "methodSource": "listPatients(): Promise<Patient[]> {\n    return this.patientRepository.findAll();\n  }",
         "constructorDependencies": [
           {
             "name": "patientRepository",
@@ -4186,7 +4167,7 @@
           {
             "method": "this.patientRepository.findAll",
             "kind": "query",
-            "isAsync": false,
+            "isAsync": true,
             "returnUsed": true
           }
         ],
@@ -4313,7 +4294,7 @@
         "functionName": "createPatient",
         "isAsync": true,
         "methodSignature": "createPatient(dto: CreatePatientDto): Promise<Patient>",
-        "methodSource": "async createPatient(dto: CreatePatientDto): Promise<Patient> {\r\n    const normalizedCpf = dto.cpf.replace(/[.-]/g, '');\r\n    const normalizedEmail = dto.email?.toLowerCase();\r\n    const existingCpf = await this.patientRepository.findByCpf(normalizedCpf);\r\n    if (existingCpf) {\r\n      throw new ConflictException(`CPF ${dto.cpf} already registered`);\r\n    }\r\n    if (normalizedEmail) {\r\n      const existingEmail =\r\n        await this.patientRepository.findByEmail(normalizedEmail);\r\n      if (existingEmail) {\r\n        throw new ConflictException(`Email ${dto.email} already registered`);\r\n      }\r\n    }\r\n    const patient = this.patientRepository.create({\r\n      ...dto,\r\n      cpf: normalizedCpf,\r\n      email: normalizedEmail,\r\n      birthDate: new Date(dto.birthDate),\r\n    });\r\n    return this.patientRepository.save(patient);\r\n  }",
+        "methodSource": "async createPatient(dto: CreatePatientDto): Promise<Patient> {\n    const normalizedCpf = dto.cpf.replace(/[.-]/g, '');\n    const normalizedEmail = dto.email?.toLowerCase();\n    const existingCpf = await this.patientRepository.findByCpf(normalizedCpf);\n    if (existingCpf) {\n      throw new ConflictException(`CPF ${dto.cpf} already registered`);\n    }\n    if (normalizedEmail) {\n      const existingEmail =\n        await this.patientRepository.findByEmail(normalizedEmail);\n      if (existingEmail) {\n        throw new ConflictException(`Email ${dto.email} already registered`);\n      }\n    }\n    const patient = this.patientRepository.create({\n      ...dto,\n      cpf: normalizedCpf,\n      email: normalizedEmail,\n      birthDate: new Date(dto.birthDate),\n    });\n    return this.patientRepository.save(patient);\n  }",
         "constructorDependencies": [
           {
             "name": "patientRepository",
@@ -4321,20 +4302,6 @@
           }
         ],
         "dependencyCalls": [
-          {
-            "method": "dto.cpf.replace",
-            "kind": "external_service",
-            "isAsync": false,
-            "returnUsed": true,
-            "assignedTo": "normalizedCpf"
-          },
-          {
-            "method": "dto.email?.toLowerCase",
-            "kind": "external_service",
-            "isAsync": false,
-            "returnUsed": true,
-            "assignedTo": "normalizedEmail"
-          },
           {
             "method": "this.patientRepository.findByCpf",
             "kind": "query",
@@ -4359,7 +4326,7 @@
           {
             "method": "this.patientRepository.save",
             "kind": "repository_save",
-            "isAsync": false,
+            "isAsync": true,
             "returnUsed": true
           }
         ],
@@ -4562,7 +4529,7 @@
         "functionName": "updatePatient",
         "isAsync": true,
         "methodSignature": "updatePatient(id: string, dto: UpdatePatientDto): Promise<Patient>",
-        "methodSource": "async updatePatient(id: string, dto: UpdatePatientDto): Promise<Patient> {\r\n    const patient = await this.getPatientById(id);\r\n    if (dto.email && dto.email.toLowerCase() !== patient.email) {\r\n      const existingEmail = await this.patientRepository.findByEmail(\r\n        dto.email.toLowerCase(),\r\n      );\r\n      if (existingEmail) {\r\n        throw new ConflictException(`Email ${dto.email} already registered`);\r\n      }\r\n    }\r\n    const updateData: Partial<Patient> = {\r\n      ...(dto.name && { name: dto.name }),\r\n      ...(dto.sex && { sex: dto.sex }),\r\n      ...(dto.phone !== undefined && { phone: dto.phone }),\r\n      ...(dto.active !== undefined && { active: dto.active }),\r\n      ...(dto.email && { email: dto.email.toLowerCase() }),\r\n      ...(dto.birthDate && { birthDate: new Date(dto.birthDate) }),\r\n    };\r\n    return this.patientRepository.update(patient, updateData);\r\n  }",
+        "methodSource": "async updatePatient(id: string, dto: UpdatePatientDto): Promise<Patient> {\n    const patient = await this.getPatientById(id);\n    if (dto.email && dto.email.toLowerCase() !== patient.email) {\n      const existingEmail = await this.patientRepository.findByEmail(\n        dto.email.toLowerCase(),\n      );\n      if (existingEmail) {\n        throw new ConflictException(`Email ${dto.email} already registered`);\n      }\n    }\n    const updateData: Partial<Patient> = {\n      ...(dto.name && { name: dto.name }),\n      ...(dto.sex && { sex: dto.sex }),\n      ...(dto.phone !== undefined && { phone: dto.phone }),\n      ...(dto.active !== undefined && { active: dto.active }),\n      ...(dto.email && { email: dto.email.toLowerCase() }),\n      ...(dto.birthDate && { birthDate: new Date(dto.birthDate) }),\n    };\n    return this.patientRepository.update(patient, updateData);\n  }",
         "constructorDependencies": [
           {
             "name": "patientRepository",
@@ -4578,12 +4545,6 @@
             "assignedTo": "patient"
           },
           {
-            "method": "dto.email.toLowerCase",
-            "kind": "external_service",
-            "isAsync": false,
-            "returnUsed": false
-          },
-          {
             "method": "this.patientRepository.findByEmail",
             "kind": "query",
             "isAsync": true,
@@ -4591,23 +4552,9 @@
             "assignedTo": "existingEmail"
           },
           {
-            "method": "dto.email.toLowerCase",
-            "kind": "external_service",
-            "isAsync": false,
-            "returnUsed": true,
-            "assignedTo": "existingEmail"
-          },
-          {
-            "method": "dto.email.toLowerCase",
-            "kind": "external_service",
-            "isAsync": false,
-            "returnUsed": true,
-            "assignedTo": "updateData"
-          },
-          {
             "method": "this.patientRepository.update",
             "kind": "repository_save",
-            "isAsync": false,
+            "isAsync": true,
             "returnUsed": true
           }
         ],
@@ -4839,7 +4786,7 @@
         "functionName": "findByCpfOrFail",
         "isAsync": true,
         "methodSignature": "findByCpfOrFail(cpf: string): Promise<Patient>",
-        "methodSource": "async findByCpfOrFail(cpf: string): Promise<Patient> {\r\n    const patient = await this.patientRepository.findByCpf(cpf);\r\n    if (!patient) {\r\n      throw new NotFoundException(`Patient with cpf ${cpf} not found`);\r\n    }\r\n    return patient;\r\n  }",
+        "methodSource": "async findByCpfOrFail(cpf: string): Promise<Patient> {\n    const patient = await this.patientRepository.findByCpf(cpf);\n    if (!patient) {\n      throw new NotFoundException(`Patient with cpf ${cpf} not found`);\n    }\n    return patient;\n  }",
         "constructorDependencies": [
           {
             "name": "patientRepository",
@@ -4974,7 +4921,7 @@
       "line": 26,
       "end_line": 39,
       "loc": 14,
-      "source_hash": "5514e83a",
+      "source_hash": "357b6b51",
       "is_async": true,
       "visibility": "public",
       "parameters": [
@@ -4990,7 +4937,7 @@
         "functionName": "createResult",
         "isAsync": true,
         "methodSignature": "createResult(dto: CreateResultDto): Promise<Result>",
-        "methodSource": "async createResult(dto: CreateResultDto): Promise<Result> {\r\n    await this.orderService.validateOrderResult(dto.orderId, dto.status);\r\n    const result = this.resultRepository.create({\r\n      ...dto,\r\n      resultDate: new Date(dto.resultDate),\r\n      referenceMin: dto.referenceMin ?? null,\r\n      referenceMax: dto.referenceMax ?? null,\r\n      sourceSystem: dto.sourceSystem ?? null,\r\n      notes: dto.notes ?? null,\r\n    });\r\n    return this.resultRepository.save(result);\r\n  }",
+        "methodSource": "async createResult(dto: CreateResultDto): Promise<Result> {\n    await this.orderService.validateOrderResult(dto.orderId, dto.status);\n    const result = this.resultRepository.create({\n      ...dto,\n      resultDate: new Date(dto.resultDate),\n      referenceMin: dto.referenceMin ?? null,\n      referenceMax: dto.referenceMax ?? null,\n      sourceSystem: dto.sourceSystem ?? null,\n      notes: dto.notes ?? null,\n    });\n    return this.resultRepository.save(result);\n  }",
         "constructorDependencies": [
           {
             "name": "resultRepository",
@@ -5018,7 +4965,7 @@
           {
             "method": "this.resultRepository.save",
             "kind": "repository_save",
-            "isAsync": false,
+            "isAsync": true,
             "returnUsed": true
           }
         ],
@@ -5202,8 +5149,8 @@
       "line": 41,
       "end_line": 43,
       "loc": 3,
-      "source_hash": "5514e83a",
-      "is_async": false,
+      "source_hash": "357b6b51",
+      "is_async": true,
       "visibility": "public",
       "parameters": [
         {
@@ -5216,9 +5163,9 @@
       "range": "low",
       "context": {
         "functionName": "searchResults",
-        "isAsync": false,
+        "isAsync": true,
         "methodSignature": "searchResults(dto: SearchResultsDto): Promise<Result[]>",
-        "methodSource": "searchResults(dto: SearchResultsDto): Promise<Result[]> {\r\n    return this.resultRepository.search(dto);\r\n  }",
+        "methodSource": "searchResults(dto: SearchResultsDto): Promise<Result[]> {\n    return this.resultRepository.search(dto);\n  }",
         "constructorDependencies": [
           {
             "name": "resultRepository",
@@ -5233,7 +5180,7 @@
           {
             "method": "this.resultRepository.search",
             "kind": "query",
-            "isAsync": false,
+            "isAsync": true,
             "returnUsed": true
           }
         ],
@@ -5412,7 +5359,7 @@
       "line": 45,
       "end_line": 51,
       "loc": 7,
-      "source_hash": "5514e83a",
+      "source_hash": "357b6b51",
       "is_async": true,
       "visibility": "public",
       "parameters": [
@@ -5428,7 +5375,7 @@
         "functionName": "getResultById",
         "isAsync": true,
         "methodSignature": "getResultById(id: string): Promise<Result>",
-        "methodSource": "async getResultById(id: string): Promise<Result> {\r\n    const result = await this.resultRepository.findById(id);\r\n    if (!result) {\r\n      throw new NotFoundException(`Result with id ${id} not found`);\r\n    }\r\n    return result;\r\n  }",
+        "methodSource": "async getResultById(id: string): Promise<Result> {\n    const result = await this.resultRepository.findById(id);\n    if (!result) {\n      throw new NotFoundException(`Result with id ${id} not found`);\n    }\n    return result;\n  }",
         "constructorDependencies": [
           {
             "name": "resultRepository",
@@ -5581,7 +5528,7 @@
       "line": 53,
       "end_line": 124,
       "loc": 72,
-      "source_hash": "5514e83a",
+      "source_hash": "357b6b51",
       "is_async": true,
       "visibility": "public",
       "parameters": [
@@ -5597,7 +5544,7 @@
         "functionName": "buildResultReport",
         "isAsync": true,
         "methodSignature": "buildResultReport(orderId: string): Promise<ResultReport>",
-        "methodSource": "async buildResultReport(orderId: string): Promise<ResultReport> {\r\n    const order = await this.orderService.getOrderById(orderId);\r\n    const results = await this.resultRepository.findByOrderId(orderId);\r\n    if (results.length === 0) {\r\n      throw new NotFoundException(`No results found for order ${orderId}`);\r\n    }\r\n    const defaultRanges: Partial<\r\n      Record<ExamType, { min: number; max: number }>\r\n    > = {\r\n      [ExamType.GLUCOSE]: { min: 70, max: 99 },\r\n      [ExamType.CREATININE]: { min: 0.6, max: 1.2 },\r\n      [ExamType.TSH]: { min: 0.4, max: 4.0 },\r\n    };\r\n    const summary = {\r\n      total: results.length,\r\n      preliminary: 0,\r\n      final: 0,\r\n      corrected: 0,\r\n      abnormal: 0,\r\n    };\r\n    const items: ResultReportItem[] = results.map((result) => {\r\n      if (result.status === ResultStatus.PRELIMINARY) summary.preliminary++;\r\n      else if (result.status === ResultStatus.FINAL) summary.final++;\r\n      else if (result.status === ResultStatus.CORRECTED) summary.corrected++;\r\n      const refMin =\r\n        result.referenceMin !== null\r\n          ? Number(result.referenceMin)\r\n          : (defaultRanges[order.examType]?.min ?? null);\r\n      const refMax =\r\n        result.referenceMax !== null\r\n          ? Number(result.referenceMax)\r\n          : (defaultRanges[order.examType]?.max ?? null);\r\n      const value = Number(result.value);\r\n      let flag: 'LOW' | 'NORMAL' | 'HIGH' | 'UNKNOWN';\r\n      if (refMin === null && refMax === null) {\r\n        flag = 'UNKNOWN';\r\n      } else if (refMin !== null && value < refMin) {\r\n        flag = 'LOW';\r\n      } else if (refMax !== null && value > refMax) {\r\n        flag = 'HIGH';\r\n      } else {\r\n        flag = 'NORMAL';\r\n      }\r\n      if (flag === 'LOW' || flag === 'HIGH') summary.abnormal++;\r\n      return {\r\n        resultId: result.id,\r\n        examType: order.examType,\r\n        value,\r\n        unit: result.unit,\r\n        status: result.status,\r\n        referenceMin: refMin,\r\n        referenceMax: refMax,\r\n        flag,\r\n        sourceSystem: result.sourceSystem,\r\n        resultDate: result.resultDate,\r\n      };\r\n    });\r\n    return { orderId, examType: order.examType, items, summary };\r\n  }",
+        "methodSource": "async buildResultReport(orderId: string): Promise<ResultReport> {\n    const order = await this.orderService.getOrderById(orderId);\n    const results = await this.resultRepository.findByOrderId(orderId);\n    if (results.length === 0) {\n      throw new NotFoundException(`No results found for order ${orderId}`);\n    }\n    const defaultRanges: Partial<\n      Record<ExamType, { min: number; max: number }>\n    > = {\n      [ExamType.GLUCOSE]: { min: 70, max: 99 },\n      [ExamType.CREATININE]: { min: 0.6, max: 1.2 },\n      [ExamType.TSH]: { min: 0.4, max: 4.0 },\n    };\n    const summary = {\n      total: results.length,\n      preliminary: 0,\n      final: 0,\n      corrected: 0,\n      abnormal: 0,\n    };\n    const items: ResultReportItem[] = results.map((result) => {\n      if (result.status === ResultStatus.PRELIMINARY) summary.preliminary++;\n      else if (result.status === ResultStatus.FINAL) summary.final++;\n      else if (result.status === ResultStatus.CORRECTED) summary.corrected++;\n      const refMin =\n        result.referenceMin !== null\n          ? Number(result.referenceMin)\n          : (defaultRanges[order.examType]?.min ?? null);\n      const refMax =\n        result.referenceMax !== null\n          ? Number(result.referenceMax)\n          : (defaultRanges[order.examType]?.max ?? null);\n      const value = Number(result.value);\n      let flag: 'LOW' | 'NORMAL' | 'HIGH' | 'UNKNOWN';\n      if (refMin === null && refMax === null) {\n        flag = 'UNKNOWN';\n      } else if (refMin !== null && value < refMin) {\n        flag = 'LOW';\n      } else if (refMax !== null && value > refMax) {\n        flag = 'HIGH';\n      } else {\n        flag = 'NORMAL';\n      }\n      if (flag === 'LOW' || flag === 'HIGH') summary.abnormal++;\n      return {\n        resultId: result.id,\n        examType: order.examType,\n        value,\n        unit: result.unit,\n        status: result.status,\n        referenceMin: refMin,\n        referenceMax: refMax,\n        flag,\n        sourceSystem: result.sourceSystem,\n        resultDate: result.resultDate,\n      };\n    });\n    return { orderId, examType: order.examType, items, summary };\n  }",
         "constructorDependencies": [
           {
             "name": "resultRepository",
@@ -5622,13 +5569,6 @@
             "isAsync": true,
             "returnUsed": true,
             "assignedTo": "results"
-          },
-          {
-            "method": "results.map",
-            "kind": "mapper",
-            "isAsync": false,
-            "returnUsed": true,
-            "assignedTo": "items"
           }
         ],
         "transformations": [
@@ -5981,7 +5921,7 @@
       "line": 126,
       "end_line": 206,
       "loc": 81,
-      "source_hash": "5514e83a",
+      "source_hash": "357b6b51",
       "is_async": true,
       "visibility": "public",
       "parameters": [
@@ -6001,7 +5941,7 @@
         "functionName": "updateResult",
         "isAsync": true,
         "methodSignature": "updateResult(id: string, dto: UpdateResultDto): Promise<Result>",
-        "methodSource": "async updateResult(id: string, dto: UpdateResultDto): Promise<Result> {\r\n    const result = await this.getResultById(id);\r\n    if (result.status === ResultStatus.CORRECTED && dto.status !== undefined) {\r\n      throw new BadRequestException(\r\n        'Cannot change status of a CORRECTED result  it is terminal',\r\n      );\r\n    }\r\n    if (dto.status !== undefined) {\r\n      const validTransitions: Record<ResultStatus, ResultStatus[]> = {\r\n        [ResultStatus.PRELIMINARY]: [\r\n          ResultStatus.FINAL,\r\n          ResultStatus.CORRECTED,\r\n        ],\r\n        [ResultStatus.FINAL]: [ResultStatus.CORRECTED],\r\n        [ResultStatus.CORRECTED]: [],\r\n      };\r\n      if (!validTransitions[result.status].includes(dto.status)) {\r\n        throw new BadRequestException(\r\n          `Invalid status transition from ${result.status} to ${dto.status}`,\r\n        );\r\n      }\r\n    }\r\n    if (dto.value !== undefined && result.status !== ResultStatus.PRELIMINARY) {\r\n      throw new BadRequestException(\r\n        'Cannot update value of a non-preliminary result',\r\n      );\r\n    }\r\n    if (dto.unit !== undefined && result.status !== ResultStatus.PRELIMINARY) {\r\n      throw new BadRequestException(\r\n        'Cannot update unit of a non-preliminary result',\r\n      );\r\n    }\r\n    if (\r\n      dto.referenceMin !== undefined &&\r\n      result.status === ResultStatus.FINAL\r\n    ) {\r\n      throw new BadRequestException(\r\n        'Cannot update referenceMin of a final result',\r\n      );\r\n    }\r\n    if (\r\n      dto.referenceMax !== undefined &&\r\n      result.status === ResultStatus.FINAL\r\n    ) {\r\n      throw new BadRequestException(\r\n        'Cannot update referenceMax of a final result',\r\n      );\r\n    }\r\n    const newMin =\r\n      dto.referenceMin ??\r\n      (result.referenceMin ? Number(result.referenceMin) : null);\r\n    const newMax =\r\n      dto.referenceMax ??\r\n      (result.referenceMax ? Number(result.referenceMax) : null);\r\n    if (newMin !== null && newMax !== null && newMin >= newMax) {\r\n      throw new BadRequestException(\r\n        'referenceMin must be less than referenceMax',\r\n      );\r\n    }\r\n    const updateData: Partial<Result> = {\r\n      ...(dto.status !== undefined && { status: dto.status }),\r\n      ...(dto.value !== undefined && { value: dto.value }),\r\n      ...(dto.unit !== undefined && { unit: dto.unit }),\r\n      ...(dto.referenceMin !== undefined && { referenceMin: dto.referenceMin }),\r\n      ...(dto.referenceMax !== undefined && { referenceMax: dto.referenceMax }),\r\n      ...(dto.notes !== undefined && { notes: dto.notes }),\r\n    };\r\n    Object.assign(result, updateData);\r\n    return this.resultRepository.save(result);\r\n  }",
+        "methodSource": "async updateResult(id: string, dto: UpdateResultDto): Promise<Result> {\n    const result = await this.getResultById(id);\n    if (result.status === ResultStatus.CORRECTED && dto.status !== undefined) {\n      throw new BadRequestException(\n        'Cannot change status of a CORRECTED result — it is terminal',\n      );\n    }\n    if (dto.status !== undefined) {\n      const validTransitions: Record<ResultStatus, ResultStatus[]> = {\n        [ResultStatus.PRELIMINARY]: [\n          ResultStatus.FINAL,\n          ResultStatus.CORRECTED,\n        ],\n        [ResultStatus.FINAL]: [ResultStatus.CORRECTED],\n        [ResultStatus.CORRECTED]: [],\n      };\n      if (!validTransitions[result.status].includes(dto.status)) {\n        throw new BadRequestException(\n          `Invalid status transition from ${result.status} to ${dto.status}`,\n        );\n      }\n    }\n    if (dto.value !== undefined && result.status !== ResultStatus.PRELIMINARY) {\n      throw new BadRequestException(\n        'Cannot update value of a non-preliminary result',\n      );\n    }\n    if (dto.unit !== undefined && result.status !== ResultStatus.PRELIMINARY) {\n      throw new BadRequestException(\n        'Cannot update unit of a non-preliminary result',\n      );\n    }\n    if (\n      dto.referenceMin !== undefined &&\n      result.status === ResultStatus.FINAL\n    ) {\n      throw new BadRequestException(\n        'Cannot update referenceMin of a final result',\n      );\n    }\n    if (\n      dto.referenceMax !== undefined &&\n      result.status === ResultStatus.FINAL\n    ) {\n      throw new BadRequestException(\n        'Cannot update referenceMax of a final result',\n      );\n    }\n    const newMin =\n      dto.referenceMin ??\n      (result.referenceMin !== null ? Number(result.referenceMin) : null);\n    const newMax =\n      dto.referenceMax ??\n      (result.referenceMax !== null ? Number(result.referenceMax) : null);\n    if (newMin !== null && newMax !== null && newMin >= newMax) {\n      throw new BadRequestException(\n        'referenceMin must be less than referenceMax',\n      );\n    }\n    const updateData: Partial<Result> = {\n      ...(dto.status !== undefined && { status: dto.status }),\n      ...(dto.value !== undefined && { value: dto.value }),\n      ...(dto.unit !== undefined && { unit: dto.unit }),\n      ...(dto.referenceMin !== undefined && { referenceMin: dto.referenceMin }),\n      ...(dto.referenceMax !== undefined && { referenceMax: dto.referenceMax }),\n      ...(dto.notes !== undefined && { notes: dto.notes }),\n    };\n    Object.assign(result, updateData);\n    return this.resultRepository.save(result);\n  }",
         "constructorDependencies": [
           {
             "name": "resultRepository",
@@ -6021,28 +5961,16 @@
             "assignedTo": "result"
           },
           {
-            "method": "validTransitions[result.status].includes",
-            "kind": "external_service",
-            "isAsync": false,
-            "returnUsed": false
-          },
-          {
-            "method": "Object.assign",
-            "kind": "external_service",
-            "isAsync": false,
-            "returnUsed": false
-          },
-          {
             "method": "this.resultRepository.save",
             "kind": "repository_save",
-            "isAsync": false,
+            "isAsync": true,
             "returnUsed": true
           }
         ],
         "transformations": [
           {
             "targetField": "[ResultStatus.PRELIMINARY]",
-            "sourceExpression": "[\r\n          ResultStatus.FINAL,\r\n          ResultStatus.CORRECTED,\r\n        ]",
+            "sourceExpression": "[\n          ResultStatus.FINAL,\n          ResultStatus.CORRECTED,\n        ]",
             "kind": "mapping"
           },
           {
@@ -6096,7 +6024,7 @@
           "getResultById(id: string): Promise<Result>"
         ],
         "businessRules": [
-          "Cannot change status of a CORRECTED result  it is terminal",
+          "Cannot change status of a CORRECTED result — it is terminal",
           "Invalid status transition from <value> to <value>",
           "Cannot update value of a non-preliminary result",
           "Cannot update unit of a non-preliminary result",
@@ -6133,12 +6061,12 @@
             "throws": "BadRequestException"
           },
           {
-            "condition": "dto.referenceMin !== undefined &&\r\n      result.status === ResultStatus.FINAL",
+            "condition": "dto.referenceMin !== undefined &&\n      result.status === ResultStatus.FINAL",
             "calledMethods": [],
             "throws": "BadRequestException"
           },
           {
-            "condition": "dto.referenceMax !== undefined &&\r\n      result.status === ResultStatus.FINAL",
+            "condition": "dto.referenceMax !== undefined &&\n      result.status === ResultStatus.FINAL",
             "calledMethods": [],
             "throws": "BadRequestException"
           },
